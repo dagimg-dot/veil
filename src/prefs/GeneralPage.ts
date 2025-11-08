@@ -1,12 +1,19 @@
 import Adw from "gi://Adw";
 import type Gio from "gi://Gio";
 import GObject from "gi://GObject";
+import Gtk from "gi://Gtk";
 import { getTemplate } from "../utils/getTemplate.js";
 import { logger } from "../utils/logger.js";
 
 export interface GeneralPageChildren {
 	_saveState: Adw.ComboRow;
 	_defaultVisibility: Adw.ComboRow;
+	_openIconRow: Adw.ActionRow;
+	_closeIconRow: Adw.ActionRow;
+	_openIconButton: Gtk.Button;
+	_closeIconButton: Gtk.Button;
+	_openIconClearButton: Gtk.Button;
+	_closeIconClearButton: Gtk.Button;
 	_autoHideEnabled: Adw.SwitchRow;
 	_autoHideDuration: Adw.SpinRow;
 	_animationEnabled: Adw.SwitchRow;
@@ -22,6 +29,12 @@ export const GeneralPage = GObject.registerClass(
 		InternalChildren: [
 			"saveState",
 			"defaultVisibility",
+			"openIconRow",
+			"closeIconRow",
+			"openIconButton",
+			"closeIconButton",
+			"openIconClearButton",
+			"closeIconClearButton",
 			"autoHideEnabled",
 			"autoHideDuration",
 			"animationEnabled",
@@ -59,6 +72,22 @@ export const GeneralPage = GObject.registerClass(
 					visible: selectedIndex === 0,
 				});
 			});
+
+			this.setupIconChooser(
+				children._openIconButton,
+				children._openIconClearButton,
+				children._openIconRow,
+				"custom-open-icon",
+				"Icon shown when items are hidden",
+			);
+
+			this.setupIconChooser(
+				children._closeIconButton,
+				children._closeIconClearButton,
+				children._closeIconRow,
+				"custom-close-icon",
+				"Icon shown when items are visible",
+			);
 
 			// Bind auto-hide enabled switch
 			const autoHideEnabled = settings.get_boolean("auto-hide-enabled");
@@ -115,6 +144,78 @@ export const GeneralPage = GObject.registerClass(
 				if (selectedIndex >= 0 && selectedIndex < loggingLevels.length) {
 					settings.set_string("logging-level", loggingLevels[selectedIndex]);
 				}
+			});
+		}
+
+		private setupIconChooser(
+			button: Gtk.Button,
+			clearButton: Gtk.Button,
+			row: Adw.ActionRow,
+			settingsKey: string,
+			defaultSubtitle: string,
+		) {
+			// Update subtitle to show current icon path
+			const updateSubtitle = () => {
+				const iconPath = this.settings.get_string(settingsKey);
+				if (iconPath && iconPath.length > 0) {
+					row.set_subtitle(iconPath);
+				} else {
+					row.set_subtitle(defaultSubtitle);
+				}
+			};
+
+			// Initial update
+			updateSubtitle();
+
+			// File chooser button handler
+			button.connect("clicked", () => {
+				const dialog = new Gtk.FileChooserDialog({
+					title: "Select Icon",
+					action: Gtk.FileChooserAction.OPEN,
+					modal: true,
+					transient_for: this.get_root() as Gtk.Window,
+				});
+
+				dialog.add_button("Cancel", Gtk.ResponseType.CANCEL);
+				dialog.add_button("Select", Gtk.ResponseType.ACCEPT);
+
+				// Add SVG file filter
+				const filter = new Gtk.FileFilter();
+				filter.set_name("SVG Images");
+				filter.add_mime_type("image/svg+xml");
+				filter.add_pattern("*.svg");
+				dialog.add_filter(filter);
+
+				// Add "All Files" filter as fallback
+				const allFilter = new Gtk.FileFilter();
+				allFilter.set_name("All Files");
+				allFilter.add_pattern("*");
+				dialog.add_filter(allFilter);
+
+				dialog.connect("response", (_dialog: Gtk.Dialog, response: number) => {
+					if (response === Gtk.ResponseType.ACCEPT) {
+						const fileChooser = _dialog as Gtk.FileChooserDialog;
+						const file = fileChooser.get_file();
+						if (file) {
+							const path = file.get_path();
+							if (path) {
+								this.settings.set_string(settingsKey, path);
+								updateSubtitle();
+								logger.debug("Icon path updated", { key: settingsKey, path });
+							}
+						}
+					}
+					dialog.destroy();
+				});
+
+				dialog.show();
+			});
+
+			// Clear button handler
+			clearButton.connect("clicked", () => {
+				this.settings.set_string(settingsKey, "");
+				updateSubtitle();
+				logger.debug("Icon path cleared", { key: settingsKey });
 			});
 		}
 	},
