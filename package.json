@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev": "bun check && ./scripts/build.sh --build --unsafe-reload",
-    "dev:nested": "bun build:install && env MUTTER_DEBUG_DUMMY_MODE_SPECS=1500x900 ./scripts/dev-run.sh",
+    "dev:nested": "bun build:install && ./scripts/dev-run.sh",
     "build": "./scripts/build.sh --build",
     "build:install": "bun check && ./scripts/build.sh --build --install",
     "setup": "./scripts/setup.sh",
