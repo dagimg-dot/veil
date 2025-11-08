@@ -7,6 +7,8 @@ import { logger } from "../utils/logger.js";
 export interface GeneralPageChildren {
 	_saveState: Adw.ComboRow;
 	_defaultVisibility: Adw.ComboRow;
+	_autoHideEnabled: Adw.SwitchRow;
+	_autoHideDuration: Adw.SpinRow;
 	_loggingLevel: Adw.ComboRow;
 	_journalctlCommand: Adw.EntryRow;
 }
@@ -18,6 +20,8 @@ export const GeneralPage = GObject.registerClass(
 		InternalChildren: [
 			"saveState",
 			"defaultVisibility",
+			"autoHideEnabled",
+			"autoHideDuration",
 			"loggingLevel",
 			"journalctlCommand",
 		],
@@ -50,6 +54,28 @@ export const GeneralPage = GObject.registerClass(
 				logger.debug("Default visibility changed", {
 					visible: selectedIndex === 0,
 				});
+			});
+
+			// Bind auto-hide enabled switch
+			const autoHideEnabled = settings.get_boolean("auto-hide-enabled");
+			children._autoHideEnabled.set_active(autoHideEnabled);
+			children._autoHideDuration.set_sensitive(autoHideEnabled);
+
+			children._autoHideEnabled.connect("notify::active", () => {
+				const isActive = children._autoHideEnabled.get_active();
+				settings.set_boolean("auto-hide-enabled", isActive);
+				children._autoHideDuration.set_sensitive(isActive);
+				logger.debug("Auto-hide enabled changed", { enabled: isActive });
+			});
+
+			// Bind auto-hide duration spin row
+			const autoHideDuration = settings.get_int("auto-hide-duration");
+			children._autoHideDuration.set_value(autoHideDuration);
+
+			children._autoHideDuration.connect("notify::value", () => {
+				const value = children._autoHideDuration.get_value();
+				settings.set_int("auto-hide-duration", value);
+				logger.debug("Auto-hide duration changed", { duration: value });
 			});
 
 			// Bind logging level combo

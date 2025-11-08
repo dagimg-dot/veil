@@ -17,6 +17,11 @@
             <summary>Default visibility</summary>
             <description>Default visibility state when save-state is disabled</description>
         </key>
+        <key name="saved-visibility" type="b">
+            <default>true</default>
+            <summary>Saved visibility state</summary>
+            <description>The last visibility state when save-state is enabled</description>
+        </key>
         <key name="visible-items" type="as">
             <default>[]</default>
             <summary>Visible items</summary>
@@ -26,6 +31,17 @@
             <default>[]</default>
             <summary>All panel items</summary>
             <description>List of all detected panel items (auto-updated)</description>
+        </key>
+        <key name="auto-hide-enabled" type="b">
+            <default>false</default>
+            <summary>Auto-hide enabled</summary>
+            <description>Automatically hide panel items after a specified duration</description>
+        </key>
+        <key name="auto-hide-duration" type="i">
+            <default>30</default>
+            <range min="1" max="300"/>
+            <summary>Auto-hide duration</summary>
+            <description>Duration in seconds before automatically hiding panel items</description>
         </key>
     </schema>
 </schemalist>

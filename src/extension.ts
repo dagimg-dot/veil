@@ -73,6 +73,16 @@ export default class Veil extends Extension {
 				}
 			}),
 		);
+		this.settingsHandlers.push(
+			this.settings.connect("changed::auto-hide-enabled", () => {
+				logger.debug("Auto-hide enabled setting changed");
+			}),
+		);
+		this.settingsHandlers.push(
+			this.settings.connect("changed::auto-hide-duration", () => {
+				logger.debug("Auto-hide duration setting changed");
+			}),
+		);
 
 		const initialVisibility = this.stateManager.getVisibility();
 		this.panelManager.setVisibility(initialVisibility);
@@ -129,7 +139,11 @@ export default class Veil extends Extension {
 			this.indicator = null;
 		}
 
-		this.stateManager = null;
+		if (this.stateManager) {
+			this.stateManager.destroy();
+			this.stateManager = null;
+		}
+
 		this.settings = null;
 
 		logger.info("Veil extension cleanup complete");
