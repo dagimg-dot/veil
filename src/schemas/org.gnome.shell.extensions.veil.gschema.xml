@@ -54,5 +54,15 @@
             <summary>Animation duration</summary>
             <description>Duration of fade animations in milliseconds</description>
         </key>
+        <key name="custom-open-icon" type="s">
+            <default>''</default>
+            <summary>Custom open icon</summary>
+            <description>Path to custom SVG icon for open state (empty uses default)</description>
+        </key>
+        <key name="custom-close-icon" type="s">
+            <default>''</default>
+            <summary>Custom close icon</summary>
+            <description>Path to custom SVG icon for close state (empty uses default)</description>
+        </key>
     </schema>
 </schemalist>

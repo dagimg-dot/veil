@@ -1,4 +1,5 @@
 import Clutter from "gi://Clutter";
+import type Gio from "gi://Gio";
 import St from "gi://St";
 import type { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
@@ -11,9 +12,11 @@ export class VeilIndicator {
 	private extension: Extension;
 	private iconWidget: St.Icon | null = null;
 	private onToggleCallback?: () => void;
+	private settings: Gio.Settings;
 
-	constructor(extension: Extension) {
+	constructor(extension: Extension, settings: Gio.Settings) {
 		this.extension = extension;
+		this.settings = settings;
 		this.indicator = new PanelMenu.Button(0, "Veil");
 		this.setupUI();
 		this.setupMenu();
@@ -21,7 +24,7 @@ export class VeilIndicator {
 	}
 
 	private setupUI() {
-		new Icons(this.extension.path);
+		new Icons(this.extension.path, this.settings);
 		this.updateIcon(true);
 	}
 

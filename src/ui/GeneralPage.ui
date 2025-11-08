@@ -40,6 +40,62 @@
     </child>
     <child>
       <object class="AdwPreferencesGroup">
+        <property name="title" translatable="true">Icons</property>
+        <property name="description" translatable="true">Customize the indicator icons</property>
+        <child>
+          <object class="AdwActionRow" id="openIconRow">
+            <property name="title" translatable="true">Open Icon</property>
+            <property name="subtitle" translatable="true">Icon shown when items are hidden</property>
+            <child type="suffix">
+              <object class="GtkButton" id="openIconButton">
+                <property name="icon-name">folder-open-symbolic</property>
+                <property name="valign">center</property>
+                <style>
+                  <class name="flat"/>
+                </style>
+              </object>
+            </child>
+            <child type="suffix">
+              <object class="GtkButton" id="openIconClearButton">
+                <property name="icon-name">edit-clear-symbolic</property>
+                <property name="valign">center</property>
+                <property name="tooltip-text">Reset to default</property>
+                <style>
+                  <class name="flat"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow" id="closeIconRow">
+            <property name="title" translatable="true">Close Icon</property>
+            <property name="subtitle" translatable="true">Icon shown when items are visible</property>
+            <child type="suffix">
+              <object class="GtkButton" id="closeIconButton">
+                <property name="icon-name">folder-open-symbolic</property>
+                <property name="valign">center</property>
+                <style>
+                  <class name="flat"/>
+                </style>
+              </object>
+            </child>
+            <child type="suffix">
+              <object class="GtkButton" id="closeIconClearButton">
+                <property name="icon-name">edit-clear-symbolic</property>
+                <property name="valign">center</property>
+                <property name="tooltip-text">Reset to default</property>
+                <style>
+                  <class name="flat"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup">
         <property name="title" translatable="true">Auto Hide</property>
         <property name="description" translatable="true">Automatically hide panel items after showing them</property>
         <child>

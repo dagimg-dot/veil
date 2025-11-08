@@ -22,7 +22,7 @@ export default class Veil extends Extension {
 
 		this.stateManager = new StateManager(this.settings);
 
-		this.indicator = new VeilIndicator(this);
+		this.indicator = new VeilIndicator(this, this.settings);
 		const indicatorButton = this.indicator.getButton();
 
 		// Position indicator right before Quick Settings
