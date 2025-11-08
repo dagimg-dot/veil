@@ -67,6 +67,33 @@
     </child>
     <child>
       <object class="AdwPreferencesGroup">
+        <property name="title" translatable="true">Animations</property>
+        <property name="description" translatable="true">Smooth fade animations when hiding/showing items</property>
+        <child>
+          <object class="AdwSwitchRow" id="animationEnabled">
+            <property name="title" translatable="true">Enable Animations</property>
+            <property name="subtitle" translatable="true">Use smooth fade transitions</property>
+          </object>
+        </child>
+        <child>
+          <object class="AdwSpinRow" id="animationDuration">
+            <property name="title" translatable="true">Duration (milliseconds)</property>
+            <property name="subtitle" translatable="true">Animation speed (lower is faster)</property>
+            <property name="adjustment">
+              <object class="GtkAdjustment">
+                <property name="lower">50</property>
+                <property name="upper">1000</property>
+                <property name="step-increment">10</property>
+                <property name="page-increment">50</property>
+                <property name="value">200</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup">
         <property name="title" translatable="true">Debug Settings</property>
         <child>
           <object class="AdwComboRow" id="loggingLevel">

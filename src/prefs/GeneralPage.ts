@@ -9,6 +9,8 @@ export interface GeneralPageChildren {
 	_defaultVisibility: Adw.ComboRow;
 	_autoHideEnabled: Adw.SwitchRow;
 	_autoHideDuration: Adw.SpinRow;
+	_animationEnabled: Adw.SwitchRow;
+	_animationDuration: Adw.SpinRow;
 	_loggingLevel: Adw.ComboRow;
 	_journalctlCommand: Adw.EntryRow;
 }
@@ -22,6 +24,8 @@ export const GeneralPage = GObject.registerClass(
 			"defaultVisibility",
 			"autoHideEnabled",
 			"autoHideDuration",
+			"animationEnabled",
+			"animationDuration",
 			"loggingLevel",
 			"journalctlCommand",
 		],
@@ -76,6 +80,28 @@ export const GeneralPage = GObject.registerClass(
 				const value = children._autoHideDuration.get_value();
 				settings.set_int("auto-hide-duration", value);
 				logger.debug("Auto-hide duration changed", { duration: value });
+			});
+
+			// Bind animation enabled switch
+			const animationEnabled = settings.get_boolean("animation-enabled");
+			children._animationEnabled.set_active(animationEnabled);
+			children._animationDuration.set_sensitive(animationEnabled);
+
+			children._animationEnabled.connect("notify::active", () => {
+				const isActive = children._animationEnabled.get_active();
+				settings.set_boolean("animation-enabled", isActive);
+				children._animationDuration.set_sensitive(isActive);
+				logger.debug("Animation enabled changed", { enabled: isActive });
+			});
+
+			// Bind animation duration spin row
+			const animationDuration = settings.get_int("animation-duration");
+			children._animationDuration.set_value(animationDuration);
+
+			children._animationDuration.connect("notify::value", () => {
+				const value = children._animationDuration.get_value();
+				settings.set_int("animation-duration", value);
+				logger.debug("Animation duration changed", { duration: value });
 			});
 
 			// Bind logging level combo
