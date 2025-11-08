@@ -70,7 +70,7 @@ export class StateManager {
 			GLib.PRIORITY_DEFAULT,
 			duration,
 			() => {
-				logger.info("Auto-hide timer expired, hiding items");
+				logger.debug("Auto-hide timer expired, hiding items");
 				this.autoHideTimerId = null;
 				this.setVisibility(false);
 				return GLib.SOURCE_REMOVE;
