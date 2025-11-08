@@ -69,5 +69,10 @@
             <summary>Hide Quick Settings</summary>
             <description>When enabled, the Veil indicator will be positioned first in the panel</description>
         </key>
+        <key name="toggle-shortcut" type="as">
+            <default><![CDATA[['<Ctrl><Alt>o']]]></default>
+            <summary>Toggle Shortcut</summary>
+            <description>Keyboard shortcut to toggle Veil visibility</description>
+        </key>
     </schema>
 </schemalist>

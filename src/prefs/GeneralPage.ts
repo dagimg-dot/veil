@@ -1,4 +1,5 @@
 import Adw from "gi://Adw";
+import Gdk from "gi://Gdk";
 import type Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
@@ -9,6 +10,9 @@ export interface GeneralPageChildren {
 	_saveState: Adw.ComboRow;
 	_defaultVisibility: Adw.ComboRow;
 	_hideQuickSettings: Adw.SwitchRow;
+	_toggleShortcutRow: Adw.ActionRow;
+	_toggleShortcutLabel: Gtk.ShortcutLabel;
+	_toggleShortcutButton: Gtk.Button;
 	_openIconRow: Adw.ActionRow;
 	_closeIconRow: Adw.ActionRow;
 	_openIconButton: Gtk.Button;
@@ -31,6 +35,9 @@ export const GeneralPage = GObject.registerClass(
 			"saveState",
 			"defaultVisibility",
 			"hideQuickSettings",
+			"toggleShortcutRow",
+			"toggleShortcutLabel",
+			"toggleShortcutButton",
 			"openIconRow",
 			"closeIconRow",
 			"openIconButton",
@@ -84,6 +91,14 @@ export const GeneralPage = GObject.registerClass(
 				settings.set_boolean("hide-quicksettings", isActive);
 				logger.debug("Hide Quick Settings changed", { enabled: isActive });
 			});
+
+			// Bind toggle shortcut
+			this.setupShortcutEditor(
+				children._toggleShortcutButton,
+				children._toggleShortcutLabel,
+				children._toggleShortcutRow,
+				"toggle-shortcut",
+			);
 
 			this.setupIconChooser(
 				children._openIconButton,
@@ -228,6 +243,133 @@ export const GeneralPage = GObject.registerClass(
 				this.settings.set_string(settingsKey, "");
 				updateSubtitle();
 				logger.debug("Icon path cleared", { key: settingsKey });
+			});
+		}
+
+		private setupShortcutEditor(
+			button: Gtk.Button,
+			label: Gtk.ShortcutLabel,
+			row: Adw.ActionRow,
+			settingsKey: string,
+		) {
+			// Update label to show current shortcut
+			const updateShortcutLabel = () => {
+				const shortcuts = this.settings.get_strv(settingsKey);
+				if (shortcuts && shortcuts.length > 0 && shortcuts[0]) {
+					label.set_accelerator(shortcuts[0]);
+					row.set_subtitle(`Current: ${shortcuts[0]}`);
+				} else {
+					label.set_accelerator("");
+					row.set_subtitle("No shortcut set");
+				}
+			};
+
+			// Initial update
+			updateShortcutLabel();
+
+			// Listen for settings changes
+			this.settings.connect(`changed::${settingsKey}`, () => {
+				updateShortcutLabel();
+			});
+
+			// Button click handler
+			button.connect("clicked", () => {
+				const dialog = new Gtk.Dialog({
+					title: "Set Keyboard Shortcut",
+					modal: true,
+					transient_for: this.get_root() as Gtk.Window,
+				});
+
+				dialog.add_button("Cancel", Gtk.ResponseType.CANCEL);
+				dialog.add_button("Clear", Gtk.ResponseType.REJECT);
+				dialog.add_button("Set", Gtk.ResponseType.ACCEPT);
+
+				const contentArea = dialog.get_content_area() as Gtk.Box;
+				const label = new Gtk.Label({
+					label:
+						"Press your desired key combination...\n\nPress Escape to cancel.",
+					justify: Gtk.Justification.CENTER,
+					margin_top: 20,
+					margin_bottom: 20,
+					margin_start: 20,
+					margin_end: 20,
+				});
+				contentArea.append(label);
+
+				let capturedShortcut = "";
+
+				// Handle key press events
+				const keyController = new Gtk.EventControllerKey();
+				keyController.connect(
+					"key-pressed",
+					(_controller, keyval, _keycode, state) => {
+						// Ignore modifier keys alone
+						if (
+							[
+								Gdk.KEY_Shift_L,
+								Gdk.KEY_Shift_R,
+								Gdk.KEY_Control_L,
+								Gdk.KEY_Control_R,
+								Gdk.KEY_Alt_L,
+								Gdk.KEY_Alt_R,
+								Gdk.KEY_Super_L,
+								Gdk.KEY_Super_R,
+								Gdk.KEY_Meta_L,
+								Gdk.KEY_Meta_R,
+							].includes(keyval)
+						) {
+							return Gdk.EVENT_PROPAGATE;
+						}
+
+						// Escape cancels
+						if (keyval === Gdk.KEY_Escape) {
+							dialog.response(Gtk.ResponseType.CANCEL);
+							return Gdk.EVENT_STOP;
+						}
+
+						// Build accelerator string
+						const accelerator = Gtk.accelerator_name(keyval, state);
+						capturedShortcut = accelerator;
+						label.set_label(
+							`Shortcut: ${accelerator}\n\nPress Enter to confirm or Escape to cancel.`,
+						);
+
+						return Gdk.EVENT_STOP;
+					},
+				);
+
+				contentArea.add_controller(keyController);
+
+				// Handle Enter key for confirmation
+				const enterController = new Gtk.EventControllerKey();
+				enterController.connect(
+					"key-pressed",
+					(_controller, keyval, _keycode, _state) => {
+						if (keyval === Gdk.KEY_Return && capturedShortcut) {
+							dialog.response(Gtk.ResponseType.ACCEPT);
+							return Gdk.EVENT_STOP;
+						}
+						return Gdk.EVENT_PROPAGATE;
+					},
+				);
+				contentArea.add_controller(enterController);
+
+				dialog.connect("response", (_dialog, response) => {
+					if (response === Gtk.ResponseType.ACCEPT && capturedShortcut) {
+						this.settings.set_strv(settingsKey, [capturedShortcut]);
+						logger.debug("Shortcut updated", {
+							key: settingsKey,
+							shortcut: capturedShortcut,
+						});
+					} else if (response === Gtk.ResponseType.REJECT) {
+						// Clear shortcut
+						this.settings.set_strv(settingsKey, []);
+						logger.debug("Shortcut cleared", { key: settingsKey });
+					}
+					dialog.destroy();
+				});
+
+				dialog.show();
 			});
 		}
 	},

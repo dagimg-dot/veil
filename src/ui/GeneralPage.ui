@@ -42,6 +42,27 @@
             <property name="subtitle" translatable="true">Position the Veil indicator first in the panel</property>
           </object>
         </child>
+        <child>
+          <object class="AdwActionRow" id="toggleShortcutRow">
+            <property name="title" translatable="true">Toggle Shortcut</property>
+            <property name="subtitle" translatable="true">Keyboard shortcut to toggle visibility</property>
+            <child type="suffix">
+              <object class="GtkShortcutLabel" id="toggleShortcutLabel">
+                <property name="accelerator">&lt;Super&gt;v</property>
+                <property name="disabled-text">Disabled</property>
+              </object>
+            </child>
+            <child type="suffix">
+              <object class="GtkButton" id="toggleShortcutButton">
+                <property name="icon-name">preferences-desktop-keyboard-shortcuts-symbolic</property>
+                <property name="valign">center</property>
+                <style>
+                  <class name="flat"/>
+                </style>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
     <child>

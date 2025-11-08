@@ -2,6 +2,7 @@ import type Gio from "gi://Gio";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { VeilIndicator } from "./components/indicator.js";
+import { KeyboardManager } from "./core/keyboardManager.js";
 import { PanelManager } from "./core/panelManager.js";
 import { QuickSettingsManager } from "./core/quickSettingsManager.js";
 import { StateManager } from "./core/stateManager.js";
@@ -13,6 +14,7 @@ export default class Veil extends Extension {
 	private panelManager!: PanelManager | null;
 	private stateManager!: StateManager | null;
 	private quickSettingsManager!: QuickSettingsManager | null;
+	private keyboardManager!: KeyboardManager | null;
 	private settingsHandlers: number[] = [];
 
 	enable() {
@@ -24,6 +26,7 @@ export default class Veil extends Extension {
 		this.stateManager = new StateManager(this.settings);
 		this.quickSettingsManager = new QuickSettingsManager(this.settings);
 		this.quickSettingsManager.setStateManager(this.stateManager);
+		this.keyboardManager = new KeyboardManager(this.settings);
 
 		this.indicator = new VeilIndicator(this, this.settings);
 		this.indicator.setQuickSettingsManager(this.quickSettingsManager);
@@ -52,6 +55,12 @@ export default class Veil extends Extension {
 		this.indicator.setOnToggle(() => {
 			this.handleToggle();
 		});
+
+		// Set up keyboard shortcut
+		this.keyboardManager.setOnToggle(() => {
+			this.handleToggle();
+		});
+		this.keyboardManager.registerShortcut();
 
 		this.stateManager.setOnVisibilityChanged((visible) => {
 			this.panelManager?.setVisibility(visible);
@@ -150,6 +159,9 @@ export default class Veil extends Extension {
 
 		this.quickSettingsManager?.restoreQuickSettings();
 
+		// Unregister keyboard shortcut
+		this.keyboardManager?.unregisterShortcut();
+
 		if (this.panelManager) {
 			this.panelManager.showAllItems();
 			this.panelManager.destroy();
@@ -168,6 +180,10 @@ export default class Veil extends Extension {
 
 		if (this.quickSettingsManager) {
 			this.quickSettingsManager = null;
+		}
+
+		if (this.keyboardManager) {
+			this.keyboardManager = null;
 		}
 
 		this.settings = null;

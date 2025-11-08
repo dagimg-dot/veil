@@ -51,7 +51,11 @@ export class VeilIndicator {
 				if (this.indicator.menu) {
 					this.indicator.menu.close();
 				}
+
+				return Clutter.EVENT_STOP;
 			}
+
+			return Clutter.EVENT_PROPAGATE;
 		});
 	}
 
