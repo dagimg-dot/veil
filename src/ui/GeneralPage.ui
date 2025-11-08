@@ -36,6 +36,12 @@
             </property>
           </object>
         </child>
+        <child>
+          <object class="AdwSwitchRow" id="hideQuickSettings">
+            <property name="title" translatable="true">Hide Quick Settings</property>
+            <property name="subtitle" translatable="true">Position the Veil indicator first in the panel</property>
+          </object>
+        </child>
       </object>
     </child>
     <child>

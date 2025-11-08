@@ -13,6 +13,10 @@ export class VeilIndicator {
 	private iconWidget: St.Icon | null = null;
 	private onToggleCallback?: () => void;
 	private settings: Gio.Settings;
+	private quickSettingsManager: {
+		getIndicatorPosition: () => number;
+		repositionIndicator: (button: St.Widget) => boolean;
+	} | null = null;
 
 	constructor(extension: Extension, settings: Gio.Settings) {
 		this.extension = extension;
@@ -21,6 +25,13 @@ export class VeilIndicator {
 		this.setupUI();
 		this.setupMenu();
 		this.setupClickHandler();
+	}
+
+	setQuickSettingsManager(manager: {
+		getIndicatorPosition: () => number;
+		repositionIndicator: (button: St.Widget) => boolean;
+	}) {
+		this.quickSettingsManager = manager;
 	}
 
 	private setupUI() {
@@ -79,6 +90,16 @@ export class VeilIndicator {
 
 	setOnToggle(callback: () => void) {
 		this.onToggleCallback = callback;
+	}
+
+	getInitialPosition(): number {
+		return this.quickSettingsManager?.getIndicatorPosition() ?? 0;
+	}
+
+	reposition(): boolean {
+		return (
+			this.quickSettingsManager?.repositionIndicator(this.indicator) ?? false
+		);
 	}
 
 	getButton(): PanelMenu.Button {

@@ -64,5 +64,10 @@
             <summary>Custom close icon</summary>
             <description>Path to custom SVG icon for close state (empty uses default)</description>
         </key>
+        <key name="hide-quicksettings" type="b">
+            <default>false</default>
+            <summary>Hide Quick Settings</summary>
+            <description>When enabled, the Veil indicator will be positioned first in the panel</description>
+        </key>
     </schema>
 </schemalist>

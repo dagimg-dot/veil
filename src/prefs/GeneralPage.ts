@@ -8,6 +8,7 @@ import { logger } from "../utils/logger.js";
 export interface GeneralPageChildren {
 	_saveState: Adw.ComboRow;
 	_defaultVisibility: Adw.ComboRow;
+	_hideQuickSettings: Adw.SwitchRow;
 	_openIconRow: Adw.ActionRow;
 	_closeIconRow: Adw.ActionRow;
 	_openIconButton: Gtk.Button;
@@ -29,6 +30,7 @@ export const GeneralPage = GObject.registerClass(
 		InternalChildren: [
 			"saveState",
 			"defaultVisibility",
+			"hideQuickSettings",
 			"openIconRow",
 			"closeIconRow",
 			"openIconButton",
@@ -71,6 +73,16 @@ export const GeneralPage = GObject.registerClass(
 				logger.debug("Default visibility changed", {
 					visible: selectedIndex === 0,
 				});
+			});
+
+			// Bind hide quick settings switch
+			const hideQuickSettings = settings.get_boolean("hide-quicksettings");
+			children._hideQuickSettings.set_active(hideQuickSettings);
+
+			children._hideQuickSettings.connect("notify::active", () => {
+				const isActive = children._hideQuickSettings.get_active();
+				settings.set_boolean("hide-quicksettings", isActive);
+				logger.debug("Hide Quick Settings changed", { enabled: isActive });
 			});
 
 			this.setupIconChooser(
