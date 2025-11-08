@@ -1,23 +1,23 @@
-import Clutter from "gi://Clutter";
+import type Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
-import GLib from "gi://GLib";
 import type St from "gi://St";
 import type * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import { MainPanel, type PanelItem } from "../types/index.js";
 import { logger } from "../utils/logger.js";
+import { AnimationManager } from "./animationManager.js";
 
 export class PanelManager {
 	private settings: Gio.Settings;
 	private veilIndicator: PanelMenu.Button;
+	private animationManager: AnimationManager;
 	private addedHandlerId: number | null = null;
 	private removedHandlerId: number | null = null;
 	private onItemsChangedCallback?: (items: string[]) => void;
-	private activeAnimations: Map<St.Widget, number> = new Map();
-	private timeoutIds: Map<St.Widget, number> = new Map();
 
 	constructor(settings: Gio.Settings, veilIndicator: PanelMenu.Button) {
 		this.settings = settings;
 		this.veilIndicator = veilIndicator;
+		this.animationManager = new AnimationManager(settings);
 		this.setupListeners();
 		this.updateAllItemsList();
 	}
@@ -139,24 +139,49 @@ export class PanelManager {
 		const visibleItems = this.settings.get_strv("visible-items");
 		const animationEnabled = this.settings.get_boolean("animation-enabled");
 
-		panelItems.forEach((item) => {
-			const shouldBeVisible = visibleItems.includes(item.name);
-			// If hiding, only show items in visibleItems list
-			// If showing, show all items
-			const targetVisibility = visible ? true : shouldBeVisible;
-
+		if (visible) {
+			// When showing all items, fade them in
 			if (animationEnabled) {
-				if (targetVisibility) {
-					this.fadeIn(item.container);
-				} else {
-					this.fadeOut(item.container);
-				}
+				panelItems.forEach((item) => {
+					this.animationManager.fadeIn(item.container);
+				});
+			} else {
+				panelItems.forEach((item) => {
+					item.container.visible = true;
+					item.container.opacity = 255;
+				});
+			}
+		} else {
+			// When hiding, first fade out all items, then fade back in the ones that should remain visible
+			if (animationEnabled) {
+				// First, fade out all items
+				const allFadeOutPromises: Promise<void>[] = [];
+
+				panelItems.forEach((item) => {
+					allFadeOutPromises.push(
+						this.animationManager.fadeOut(item.container),
+					);
+				});
+
+				// After all fade out animations complete, fade in the visible items
+				Promise.all(allFadeOutPromises).then(() => {
+					const itemsToShow = panelItems.filter((item) =>
+						visibleItems.includes(item.name),
+					);
+
+					itemsToShow.forEach((item) => {
+						this.animationManager.fadeIn(item.container);
+					});
+				});
 			} else {
 				// Instant visibility change
-				item.container.visible = targetVisibility;
-				item.container.opacity = 255;
+				panelItems.forEach((item) => {
+					const shouldBeVisible = visibleItems.includes(item.name);
+					item.container.visible = shouldBeVisible;
+					item.container.opacity = 255;
+				});
 			}
-		});
+		}
 
 		logger.debug("Set panel visibility", {
 			visible,
@@ -164,190 +189,6 @@ export class PanelManager {
 			visibleItemsCount: visibleItems.length,
 			animated: animationEnabled,
 		});
-	}
-
-	private fadeIn(actor: St.Widget) {
-		// Cancel any ongoing animation
-		this.cancelAnimation(actor);
-
-		// Make visible immediately
-		actor.visible = true;
-
-		const duration = this.settings.get_int("animation-duration");
-		const slideOffset = 30; // pixels to slide from
-
-		// Set start state - slide from right and fade in
-		actor.opacity = 0;
-		actor.set_translation(slideOffset, 0, 0);
-
-		// Add transition to actor
-		const actorWithTransitions = actor as unknown as {
-			add_transition: (
-				name: string,
-				transition: Clutter.PropertyTransition,
-			) => void;
-			connect: (signal: string, callback: () => void) => number;
-			disconnect: (id: number) => void;
-		};
-
-		// Create translation-x transition (slide in from right)
-		const translationTransition = new Clutter.PropertyTransition({
-			property_name: "translation-x",
-		});
-		translationTransition.set_from(slideOffset);
-		translationTransition.set_to(0);
-		translationTransition.set_duration(duration);
-		translationTransition.set_progress_mode(
-			Clutter.AnimationMode.EASE_OUT_QUAD,
-		);
-
-		// Create opacity transition (fade in)
-		const opacityTransition = new Clutter.PropertyTransition({
-			property_name: "opacity",
-		});
-		opacityTransition.set_from(0);
-		opacityTransition.set_to(255);
-		opacityTransition.set_duration(duration);
-		opacityTransition.set_progress_mode(Clutter.AnimationMode.EASE_OUT_QUAD);
-
-		actorWithTransitions.add_transition("veil-slide-in", translationTransition);
-		actorWithTransitions.add_transition("veil-fade-in", opacityTransition);
-
-		// Track the animation
-		this.activeAnimations.set(actor, Date.now());
-
-		// Listen for completion
-		const handlerId = actorWithTransitions.connect(
-			"transitions-completed",
-			() => {
-				actorWithTransitions.disconnect(handlerId);
-				this.activeAnimations.delete(actor);
-				logger.debug("Slide in completed");
-			},
-		);
-	}
-
-	private fadeOut(actor: St.Widget) {
-		// Cancel any ongoing animation
-		this.cancelAnimation(actor);
-
-		const duration = this.settings.get_int("animation-duration");
-		const slideOffset = 30; // pixels to slide to
-
-		// Add transition to actor
-		const actorWithTransitions = actor as unknown as {
-			add_transition: (
-				name: string,
-				transition: Clutter.PropertyTransition,
-			) => void;
-			connect: (signal: string, callback: () => void) => number;
-			disconnect: (id: number) => void;
-		};
-
-		// Create translation-x transition (slide out to right)
-		const translationTransition = new Clutter.PropertyTransition({
-			property_name: "translation-x",
-		});
-
-		translationTransition.set_from(0);
-		translationTransition.set_to(slideOffset);
-		translationTransition.set_duration(duration);
-		translationTransition.set_progress_mode(Clutter.AnimationMode.EASE_IN_QUAD);
-
-		// Create opacity transition (fade out)
-		const opacityTransition = new Clutter.PropertyTransition({
-			property_name: "opacity",
-		});
-
-		opacityTransition.set_from(actor.opacity);
-		opacityTransition.set_to(0);
-		opacityTransition.set_duration(duration);
-		opacityTransition.set_progress_mode(Clutter.AnimationMode.EASE_IN_QUAD);
-
-		actorWithTransitions.add_transition(
-			"veil-slide-out",
-			translationTransition,
-		);
-
-		actorWithTransitions.add_transition("veil-fade-out", opacityTransition);
-
-		// Track the animation
-		this.activeAnimations.set(actor, Date.now());
-
-		// Listen for completion to hide the actor
-		const handlerId = actorWithTransitions.connect(
-			"transitions-completed",
-			() => {
-				actorWithTransitions.disconnect(handlerId);
-
-				// Cancel the fallback timeout since transition completed successfully
-				const timeoutId = this.timeoutIds.get(actor);
-				if (timeoutId !== undefined) {
-					GLib.Source.remove(timeoutId);
-					this.timeoutIds.delete(actor);
-				}
-
-				actor.visible = false;
-				actor.opacity = 255;
-				actor.set_translation(0, 0, 0);
-				this.activeAnimations.delete(actor);
-				logger.debug("Slide out completed, actor hidden");
-			},
-		);
-
-		// Fallback timeout in case signal doesn't fire
-		// Cancel any existing timeout for this actor
-		const existingTimeoutId = this.timeoutIds.get(actor);
-		if (existingTimeoutId !== undefined) {
-			GLib.Source.remove(existingTimeoutId);
-		}
-
-		const timeoutId = GLib.timeout_add(
-			GLib.PRIORITY_DEFAULT,
-			duration + 100,
-			() => {
-				if (this.activeAnimations.has(actor)) {
-					logger.warn("Slide out timeout - forcing completion");
-					actor.visible = false;
-					actor.opacity = 255;
-					actor.set_translation(0, 0, 0);
-					this.activeAnimations.delete(actor);
-					this.timeoutIds.delete(actor);
-				}
-				return GLib.SOURCE_REMOVE;
-			},
-		);
-
-		this.timeoutIds.set(actor, timeoutId);
-	}
-
-	private cancelAnimation(actor: St.Widget) {
-		if (this.activeAnimations.has(actor)) {
-			const actorWithTransitions = actor as unknown as {
-				remove_all_transitions?: () => void;
-				remove_transition?: (name: string) => void;
-			};
-
-			// Try to cancel all transitions
-			try {
-				actorWithTransitions.remove_all_transitions?.();
-			} catch {
-				// Fallback: try to remove known transitions by name
-				actorWithTransitions.remove_transition?.("veil-slide-in");
-				actorWithTransitions.remove_transition?.("veil-slide-out");
-				actorWithTransitions.remove_transition?.("veil-fade-in");
-				actorWithTransitions.remove_transition?.("veil-fade-out");
-			}
-
-			// Cancel any pending timeout
-			const timeoutId = this.timeoutIds.get(actor);
-			if (timeoutId !== undefined) {
-				GLib.Source.remove(timeoutId);
-				this.timeoutIds.delete(actor);
-			}
-
-			this.activeAnimations.delete(actor);
-		}
 	}
 
 	restoreVisibility() {
@@ -378,26 +219,18 @@ export class PanelManager {
 	}
 
 	destroy() {
-		for (const actor of this.activeAnimations.keys()) {
-			this.cancelAnimation(actor);
-		}
-
-		// Clean up any remaining timeouts
-		for (const timeoutId of this.timeoutIds.values()) {
-			GLib.Source.remove(timeoutId);
-		}
-
-		this.activeAnimations.clear();
-		this.timeoutIds.clear();
+		this.animationManager.destroy();
 
 		if (this.addedHandlerId !== null) {
 			MainPanel._rightBox.disconnect(this.addedHandlerId);
 			this.addedHandlerId = null;
 		}
+
 		if (this.removedHandlerId !== null) {
 			MainPanel._rightBox.disconnect(this.removedHandlerId);
 			this.removedHandlerId = null;
 		}
+
 		logger.debug("PanelManager destroyed");
 	}
 }
