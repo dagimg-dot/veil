@@ -3,7 +3,7 @@
 </div>
 
 <p align="center" style="margin-bottom: 30px;">
-<img src="./src/assets/icons/left-arrow.svg" alt="Veil" width="100">
+<img src="./src/assets/icons/arrow-close.svg" alt="Veil" width="100">
 </p>
 
 <!-- download badge -->
