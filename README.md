@@ -17,7 +17,7 @@
   </p>
 
 <p align="center" style="margin-bottom: 30px;">
-  <img src="./public/preview.mp4" alt="Veil" width="400">
+  <img src="./public/preview.gif" alt="Veil" width="400">
 </p>
 
 Veil is a GNOME shell extension that allows you to hide items on your GNOME panel. 
