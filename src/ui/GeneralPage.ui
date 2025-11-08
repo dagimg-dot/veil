@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="VeilGeneralPage" parent="AdwPreferencesPage">
+    <property name="title" translatable="true">General</property>
+    <property name="icon_name">preferences-system-symbolic</property>
+    <child>
+      <object class="AdwPreferencesGroup">
+        <property name="title" translatable="true">Debug Settings</property>
+        <child>
+          <object class="AdwComboRow" id="loggingLevel">
+            <property name="title" translatable="true">Logging Level</property>
+            <property name="subtitle" translatable="true">Controls verbosity of extension logging</property>
+            <property name="model">
+              <object class="GtkStringList">
+                <items>
+                  <item>error</item>
+                  <item>warn</item>
+                  <item>info</item>
+                  <item>debug</item>
+                </items>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="AdwEntryRow" id="journalctlCommand">
+            <property name="title" translatable="true">Extension Logs Command</property>
+            <property name="text">journalctl /usr/bin/gnome-shell -f -o cat</property>
+            <property name="editable">false</property>
+            <property name="show-apply-button">false</property>
+          </object>
+        </child>
+      </object>
+    </child>
+
+  </template>
+</interface>

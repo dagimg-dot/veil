@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="VeilAboutPage" parent="AdwPreferencesPage">
+    <property name="title" translatable="true">About</property>
+    <property name="icon-name">dialog-information-symbolic</property>
+    <child>
+      <object class="AdwPreferencesGroup">
+        <property name="valign">0</property>
+        <property name="halign">0</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">1</property>
+            <property name="halign">3</property>
+            <property name="spacing">24</property>
+            <property name="margin-top">24</property>
+            <property name="margin-bottom">32</property>
+            <child>
+              <!-- App Icon -->
+              <object class="GtkImage" id="extensionIcon">
+                <property name="pixel-size">64</property>
+                <property name="halign">3</property>
+              </object>
+            </child>
+            <child>
+              <!-- App Name and Version -->
+              <object class="GtkBox">
+                <property name="orientation">1</property>
+                <property name="halign">3</property>
+                <property name="spacing">8</property>
+                <child>
+                  <object class="GtkLabel" id="extensionName">
+                    <property name="label">Veil</property>
+                    <property name="halign">3</property>
+                    <style>
+                      <class name="title-1" />
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="extensionVersion">
+                    <property name="label">1.0.0</property>
+                    <property name="halign">3</property>
+                    <style>
+                      <class name="version-badge" />
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <!-- Action Buttons -->
+              <object class="GtkBox">
+                <property name="orientation">1</property>
+                <property name="halign">3</property>
+                <property name="spacing">12</property>
+                <child>
+                  <object class="GtkButton" id="linkWebsite">
+                    <property name="label" translatable="true">Website</property>
+                    <property name="halign">3</property>
+                    <property name="width-request">200</property>
+                    <style>
+                      <class name="pill" />
+                    </style>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="linkIssues">
+                    <property name="label" translatable="true">Report an Issue</property>
+                    <property name="halign">3</property>
+                    <property name="width-request">200</property>
+                    <style>
+                      <class name="pill" />
+                    </style>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <!-- Legal Section -->
+      <object class="AdwPreferencesGroup">
+        <child>
+          <object class="AdwExpanderRow" id="legalRow">
+            <property name="title" translatable="true">Legal</property>
+            <property name="subtitle" translatable="true">License and legal information</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">1</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="vexpand">true</property>
+                    <property name="hexpand">true</property>
+                    <property name="min-content-height">200</property>
+                    <child>
+                      <object class="GtkTextView" id="extensionLicense">
+                        <property name="editable">false</property>
+                        <property name="cursor-visible">false</property>
+                        <property name="wrap-mode">2</property>
+                        <property name="justification">0</property>
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
