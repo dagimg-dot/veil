@@ -1,10 +1,12 @@
 import type Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import { logger } from "../utils/logger.js";
 
 export class StateManager {
 	private settings: Gio.Settings;
 	private currentVisibility: boolean;
 	private onVisibilityChangedCallback?: (visible: boolean) => void;
+	private autoHideTimerId: number | null = null;
 
 	constructor(settings: Gio.Settings) {
 		this.settings = settings;
@@ -17,13 +19,9 @@ export class StateManager {
 	private getInitialVisibility(): boolean {
 		const saveState = this.settings.get_boolean("save-state");
 		if (saveState) {
-			// If saving state, try to restore from settings
-			// For now, default to true (visible) - we can add a saved-visibility key later if needed
-			return true;
-		} else {
-			// Use default visibility setting
-			return this.settings.get_boolean("default-visibility");
+			return this.settings.get_boolean("saved-visibility");
 		}
+		return this.settings.get_boolean("default-visibility");
 	}
 
 	getVisibility(): boolean {
@@ -33,6 +31,7 @@ export class StateManager {
 	toggleVisibility(): boolean {
 		this.currentVisibility = !this.currentVisibility;
 		this.saveVisibility();
+		this.handleAutoHideTimer();
 		this.onVisibilityChangedCallback?.(this.currentVisibility);
 		logger.debug("Visibility toggled", {
 			newVisibility: this.currentVisibility,
@@ -44,19 +43,64 @@ export class StateManager {
 		if (this.currentVisibility !== visible) {
 			this.currentVisibility = visible;
 			this.saveVisibility();
+			this.handleAutoHideTimer();
 			this.onVisibilityChangedCallback?.(this.currentVisibility);
 			logger.debug("Visibility set", { visible });
 		}
 	}
 
+	private handleAutoHideTimer() {
+		// Cancel existing timer if any
+		this.cancelAutoHideTimer();
+
+		// Start timer only when items are shown and auto-hide is enabled
+		if (this.currentVisibility) {
+			const autoHideEnabled = this.settings.get_boolean("auto-hide-enabled");
+			if (autoHideEnabled) {
+				this.startAutoHideTimer();
+			}
+		}
+	}
+
+	private startAutoHideTimer() {
+		const duration = this.settings.get_int("auto-hide-duration");
+		logger.debug("Starting auto-hide timer", { duration });
+
+		this.autoHideTimerId = GLib.timeout_add_seconds(
+			GLib.PRIORITY_DEFAULT,
+			duration,
+			() => {
+				logger.info("Auto-hide timer expired, hiding items");
+				this.autoHideTimerId = null;
+				this.setVisibility(false);
+				return GLib.SOURCE_REMOVE;
+			},
+		);
+	}
+
+	private cancelAutoHideTimer() {
+		if (this.autoHideTimerId !== null) {
+			logger.debug("Cancelling auto-hide timer");
+			GLib.Source.remove(this.autoHideTimerId);
+			this.autoHideTimerId = null;
+		}
+	}
+
+	destroy() {
+		this.cancelAutoHideTimer();
+	}
+
 	private saveVisibility() {
 		const saveState = this.settings.get_boolean("save-state");
 		if (saveState) {
-			// Save visibility state - we could add a saved-visibility key to schema if needed
-			// For now, we'll rely on the visible-items list to determine state
+			this.settings.set_boolean("saved-visibility", this.currentVisibility);
+
 			logger.debug("Visibility state saved", {
 				visibility: this.currentVisibility,
 			});
+		} else {
+			this.settings.reset("saved-visibility");
+			logger.debug("Visibility state reset to default");
 		}
 	}
 
@@ -90,11 +134,11 @@ export class StateManager {
 		if (index >= 0) {
 			visibleItems.splice(index, 1);
 			this.setVisibleItems(visibleItems);
-			return false; // Item is now hidden
+			return false;
 		} else {
 			visibleItems.push(itemName);
 			this.setVisibleItems(visibleItems);
-			return true; // Item is now visible
+			return true;
 		}
 	}
 
@@ -120,9 +164,7 @@ export class StateManager {
 		this.onVisibilityChangedCallback = callback;
 	}
 
-	// Handle settings changes
 	onSaveStateChanged() {
-		// If save-state is disabled, reset to default visibility
 		const saveState = this.settings.get_boolean("save-state");
 		if (!saveState) {
 			const defaultVisibility = this.settings.get_boolean("default-visibility");
@@ -131,7 +173,6 @@ export class StateManager {
 	}
 
 	onDefaultVisibilityChanged() {
-		// If save-state is disabled, update to new default
 		const saveState = this.settings.get_boolean("save-state");
 		if (!saveState) {
 			const defaultVisibility = this.settings.get_boolean("default-visibility");
@@ -140,7 +181,6 @@ export class StateManager {
 	}
 
 	onVisibleItemsChanged() {
-		// Notify that visible items list changed
 		logger.debug("Visible items changed");
 		this.onVisibilityChangedCallback?.(this.currentVisibility);
 	}

@@ -40,6 +40,33 @@
     </child>
     <child>
       <object class="AdwPreferencesGroup">
+        <property name="title" translatable="true">Auto Hide</property>
+        <property name="description" translatable="true">Automatically hide panel items after showing them</property>
+        <child>
+          <object class="AdwSwitchRow" id="autoHideEnabled">
+            <property name="title" translatable="true">Enable Auto Hide</property>
+            <property name="subtitle" translatable="true">Automatically hide items after a specified duration</property>
+          </object>
+        </child>
+        <child>
+          <object class="AdwSpinRow" id="autoHideDuration">
+            <property name="title" translatable="true">Duration (seconds)</property>
+            <property name="subtitle" translatable="true">Time before automatically hiding items</property>
+            <property name="adjustment">
+              <object class="GtkAdjustment">
+                <property name="lower">1</property>
+                <property name="upper">300</property>
+                <property name="step-increment">1</property>
+                <property name="page-increment">10</property>
+                <property name="value">30</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup">
         <property name="title" translatable="true">Debug Settings</property>
         <child>
           <object class="AdwComboRow" id="loggingLevel">
