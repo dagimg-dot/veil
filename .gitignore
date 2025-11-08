@@ -1,0 +1,15 @@
+*.gresource*
+*.shell-extension/
+*.zip
+build/
+*~
+dist/
+gschemas.compiled
+locale/
+node_modules/
+.direnv
+.devenv
+.pre-commit-config.yaml
+result
+.DS_Store
+.vscode
