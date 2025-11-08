@@ -59,7 +59,7 @@ export const AboutPage = GObject.registerClass(
 
 			new Icons(metadata.path);
 
-			const veilIcon = Icons.get("smile") as Gio.Icon;
+			const veilIcon = Icons.get("left-arrow") as Gio.Icon;
 
 			children._extensionIcon.set_from_gicon(veilIcon);
 

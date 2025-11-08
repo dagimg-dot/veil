@@ -1,6 +1,6 @@
 import Gio from "gi://Gio";
 
-const ICONS = ["smile"] as const;
+const ICONS = ["left-arrow", "right-arrow"] as const;
 type ICON = (typeof ICONS)[number];
 
 export class Icons {

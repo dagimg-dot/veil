@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0" />
+  <template class="VeilItemsPage" parent="AdwPreferencesPage">
+    <property name="title" translatable="true">Panel Items</property>
+    <property name="icon_name">view-list-symbolic</property>
+    <child>
+      <object class="AdwPreferencesGroup" id="itemsGroup">
+        <property name="title" translatable="true">Visible Items</property>
+        <property name="description" translatable="true">Configure which panel items should remain visible when hiding. Items marked with 🔥 will remain visible.</property>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup" id="actionsGroup">
+        <property name="title" translatable="true">Actions</property>
+        <child>
+          <object class="AdwActionRow" id="resetButton">
+            <property name="title" translatable="true">Reset to Default</property>
+            <property name="subtitle" translatable="true">Clear all visible items (hide everything)</property>
+            <property name="activatable">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="AdwActionRow" id="clearButton">
+            <property name="title" translatable="true">Clear Orphaned Data</property>
+            <property name="subtitle" translatable="true">Remove references to items that no longer exist</property>
+            <property name="activatable">true</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>
+
