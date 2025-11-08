@@ -29,3 +29,14 @@ It is a modern successor to <a href="https://github.com/fablevi/HideItems">Hide 
 - Hide all or choosen items on the right side of the panel
 - Auto hide items after a delay
 - Sleek animations when showing and hiding items
+
+## Installation
+
+1. Download the `.shell-extension.zip` file from the [latest release](https://github.com/dagimg-dot/veil/releases/latest)
+2. Install using: `gnome-extensions install --force <filename>`
+3. Restart GNOME Shell or log out/in
+4. Enable the extension in GNOME Extensions app
+
+## Development
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for development instructions.
