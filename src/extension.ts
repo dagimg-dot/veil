@@ -48,10 +48,14 @@ export default class Veil extends Extension {
 		this.stateManager.setOnVisibilityChanged((visible) => {
 			this.panelManager?.setVisibility(visible);
 			this.indicator?.updateIcon(visible);
+			// Reposition indicator after visibility changes
+			this.repositionIndicator();
 		});
 
 		this.panelManager.setOnItemsChanged((items) => {
 			logger.debug("Panel items changed", { count: items.length });
+			// Reposition indicator when items are added/removed
+			this.repositionIndicator();
 		});
 
 		this.settingsHandlers.push(
@@ -93,18 +97,54 @@ export default class Veil extends Extension {
 
 	private getIndicatorPosition(): number {
 		const rightBoxItems = MainPanel._rightBox.get_children();
-		let indicatorPos = 1;
 
 		for (let index = 0; index < rightBoxItems.length; index++) {
 			const item = rightBoxItems[index];
 
 			if (item.firstChild === Main.panel.statusArea.quickSettings) {
-				indicatorPos = index;
+				// Return the position of Quick Settings so indicator goes before it
+				return index;
+			}
+		}
+
+		// Fallback: if Quick Settings not found, put at the end
+		return rightBoxItems.length;
+	}
+
+	private repositionIndicator() {
+		if (!this.indicator) return;
+
+		const indicatorButton = this.indicator.getButton();
+		const container = indicatorButton.get_parent();
+
+		if (!container) return;
+
+		// Find Quick Settings position, accounting for our indicator being in the list
+		const rightBoxItems = MainPanel._rightBox.get_children();
+
+		let quickSettingsIndex = -1;
+
+		for (let index = 0; index < rightBoxItems.length; index++) {
+			const item = rightBoxItems[index];
+
+			if (item.firstChild === Main.panel.statusArea.quickSettings) {
+				quickSettingsIndex = index;
 				break;
 			}
 		}
 
-		return indicatorPos;
+		if (quickSettingsIndex === -1) {
+			logger.warn("Could not find Quick Settings for repositioning");
+			return;
+		}
+
+		// Move indicator to be right before Quick Settings
+		MainPanel._rightBox.set_child_at_index(
+			container,
+			Math.max(0, quickSettingsIndex - 1),
+		);
+
+		logger.debug("Indicator repositioned", { position: quickSettingsIndex });
 	}
 
 	private handleToggle() {
