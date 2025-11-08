@@ -7,28 +7,15 @@
     <child>
       <object class="AdwPreferencesGroup" id="itemsGroup">
         <property name="title" translatable="true">Visible Items</property>
-        <property name="description" translatable="true">Configure which panel items should remain visible when hiding. Items marked with 🔥 will remain visible.</property>
-      </object>
-    </child>
-    <child>
-      <object class="AdwPreferencesGroup" id="actionsGroup">
-        <property name="title" translatable="true">Actions</property>
-        <child>
-          <object class="AdwActionRow" id="resetButton">
-            <property name="title" translatable="true">Reset to Default</property>
-            <property name="subtitle" translatable="true">Clear all visible items (hide everything)</property>
-            <property name="activatable">true</property>
+        <property name="description" translatable="true">Configure which panel items should remain visible when hiding. Toggle switches to show/hide items.</property>
+        <property name="header-suffix">
+          <object class="GtkButton" id="resetButton">
+            <property name="label" translatable="true">Reset All</property>
+            <property name="css-classes">destructive-action</property>
+            <property name="valign">center</property>
           </object>
-        </child>
-        <child>
-          <object class="AdwActionRow" id="clearButton">
-            <property name="title" translatable="true">Clear Orphaned Data</property>
-            <property name="subtitle" translatable="true">Remove references to items that no longer exist</property>
-            <property name="activatable">true</property>
-          </object>
-        </child>
+        </property>
       </object>
     </child>
   </template>
 </interface>
-
