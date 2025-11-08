@@ -43,5 +43,16 @@
             <summary>Auto-hide duration</summary>
             <description>Duration in seconds before automatically hiding panel items</description>
         </key>
+        <key name="animation-enabled" type="b">
+            <default>true</default>
+            <summary>Enable animations</summary>
+            <description>Use smooth fade animations when hiding/showing panel items</description>
+        </key>
+        <key name="animation-duration" type="i">
+            <default>200</default>
+            <range min="50" max="1000"/>
+            <summary>Animation duration</summary>
+            <description>Duration of fade animations in milliseconds</description>
+        </key>
     </schema>
 </schemalist>
