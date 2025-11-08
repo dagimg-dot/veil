@@ -37,12 +37,6 @@ Automates VM setup for development:
 - Installs `sshfs` and creates mount points
 - Sets up proper permissions and SSHFS mounting
 
-#### `scripts/update-contrib.sh` - Contributor Management
-Automatically updates contributors in the About page:
-- Fetches contributors from git history
-- Updates the credits section with GitHub links
-- Maintains contributor information dynamically
-
 #### `scripts/bump-version.js` - Version Management
 Handles version bumping and releases:
 - Updates `package.json` and `metadata.json` versions
@@ -62,7 +56,7 @@ bun install  # Install all dependencies
 ```bash
 bun format         # Format code with Biome
 bun lint          # Lint with safe fixes
-bun lint:fix      # Lint with unsafe fixes
+bun lint:unsafe      # Lint with unsafe fixes
 bun check         # Combined lint + format check
 bun check:types   # TypeScript type checking only
 ```
