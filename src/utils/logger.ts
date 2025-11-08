@@ -30,19 +30,29 @@ export const initializeLogger = (settings: Gio.Settings) => {
 	const levelString = settings.get_string("logging-level");
 	currentLogLevel = stringToLogLevel(levelString);
 
+	log(LogLevel.INFO, `Logger initialized with level: ${levelString}`);
+
 	// Listen for log level changes
 	settings.connect("changed::logging-level", () => {
 		const newLevelString = settings.get_string("logging-level");
 		currentLogLevel = stringToLogLevel(newLevelString);
-		log(LogLevel.INFO, `Log level changed to: ${newLevelString}`);
+		log(
+			LogLevel.INFO,
+			`Log level changed to: ${newLevelString}`,
+			undefined,
+			true,
+		);
 	});
-
-	log(LogLevel.INFO, `Logger initialized with level: ${levelString}`);
 };
 
-const log = (level: LogLevel, message: string, data?: unknown) => {
+const log = (
+	level: LogLevel,
+	message: string,
+	data?: unknown,
+	logChange = false,
+) => {
 	// Early return if log level is too low
-	if (level > currentLogLevel) {
+	if (level > currentLogLevel && !logChange) {
 		return;
 	}
 
