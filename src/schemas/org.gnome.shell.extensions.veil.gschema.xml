@@ -7,5 +7,25 @@
             <description>Controls how verbose the extension logging should be (debug, info, warn,
                 error)</description>
         </key>
+        <key name="save-state" type="b">
+            <default>true</default>
+            <summary>Save visibility state</summary>
+            <description>Whether to save and restore the visibility state on extension restart</description>
+        </key>
+        <key name="default-visibility" type="b">
+            <default>true</default>
+            <summary>Default visibility</summary>
+            <description>Default visibility state when save-state is disabled</description>
+        </key>
+        <key name="visible-items" type="as">
+            <default>[]</default>
+            <summary>Visible items</summary>
+            <description>List of panel items that should remain visible when hiding</description>
+        </key>
+        <key name="all-items" type="as">
+            <default>[]</default>
+            <summary>All panel items</summary>
+            <description>List of all detected panel items (auto-updated)</description>
+        </key>
     </schema>
 </schemalist>
