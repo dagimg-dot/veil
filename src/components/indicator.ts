@@ -60,7 +60,7 @@ export class VeilIndicator {
 		}
 
 		// left-arrow = show (items visible), right-arrow = hide (items hidden)
-		const iconName = isVisible ? "left-arrow" : "right-arrow";
+		const iconName = isVisible ? "arrow-open" : "arrow-close";
 		const veilIcon = Icons.get(iconName);
 
 		if (veilIcon) {
