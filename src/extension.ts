@@ -115,7 +115,7 @@ export default class Veil extends Extension {
 
 		const newVisibility = this.stateManager.toggleVisibility();
 
-		logger.info("Visibility toggled", { newVisibility });
+		logger.debug("Visibility toggled", { newVisibility });
 	}
 
 	disable() {
