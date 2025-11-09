@@ -29,7 +29,7 @@ major_version=$(echo "$version_output" | awk '{print $3}' | cut -d. -f1)
 
 filter_logs() {
     awk '
-    /^\['"$PROJECT_NAME"'\]/ {
+    /\['"$PROJECT_NAME"'\]/ {
         print
     }
     /^Extension/ {
