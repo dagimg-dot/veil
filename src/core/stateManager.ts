@@ -53,7 +53,7 @@ export class StateManager {
 		// Cancel existing timer if any
 		this.cancelAutoHideTimer();
 
-		// Start timer only when items are shown and auto-hide is enabled
+		// Start timer only when items are shown and auto-hide is enabledb
 		if (this.currentVisibility) {
 			const autoHideEnabled = this.settings.get_boolean("auto-hide-enabled");
 			if (autoHideEnabled) {
@@ -63,6 +63,7 @@ export class StateManager {
 	}
 
 	private startAutoHideTimer() {
+		this.cancelAutoHideTimer();
 		const duration = this.settings.get_int("auto-hide-duration");
 		logger.debug("Starting auto-hide timer", { duration });
 
