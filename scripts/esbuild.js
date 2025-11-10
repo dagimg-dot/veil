@@ -11,6 +11,7 @@ esbuild.build({
 	splitting: false,
 	sourcemap: false,
 	minify: false,
+	legalComments: "inline",
 	tsconfig: "tsconfig.json",
 	mainFields: ["module", "main"],
 	conditions: ["module", "import", "default"],

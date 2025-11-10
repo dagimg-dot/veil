@@ -76,7 +76,11 @@ function build_extension_package() {
 		fi
 
 		echo "Compiling TypeScript files..."
-		if find scripts/ -type f | grep -q "esbuild.js"; then
+		if [ "$PRESERVE_WHITESPACE" = true ]; then
+			echo "  Using gnext-transpiler to preserve whitespace..."
+			bun ./scripts/gnext-transpiler.js
+		elif find scripts/ -type f | grep -q "esbuild.js"; then
+			echo "  Using esbuild to compile TypeScript files..."
 			bun ./scripts/esbuild.js
 		else
 			bunx tsc
@@ -233,6 +237,9 @@ function usage() {
 		                        folder with your project in it. Develop on the host but
 		                        run the build script within the VM using this option to
 		                        quickly test your extension
+		  -p, --preserve-whitespace
+		                        Preserve whitespace during TypeScript
+		                        compilation by using the gnext-transpiler wrapper
 		  --compile-schemas     Compile schemas (not needed after GNOME 45)
 		  -h, --help            Display this help message
 	EOF
@@ -252,7 +259,7 @@ RESOURCE_TARGET="$BUILD_DIR/$UUID.gresource"
 USING_TYPESCRIPT=$(find . -maxdepth 1 -type f | grep -q "tsconfig.json" && echo "true" || echo "false")
 TYPESCRIPT_OUT_DIR="dist"
 COMPILE_SCHEMAS=false
-
+PRESERVE_WHITESPACE=false
 if [ "$USING_TYPESCRIPT" = "true" ]; then
 	JS_DIR="$TYPESCRIPT_OUT_DIR"
 else
@@ -270,6 +277,10 @@ while [[ $# -gt 0 ]]; do
 		BUILD=true
 		shift
 		;;
+	--preserve-whitespace | -p)
+		PRESERVE_WHITESPACE=true
+		shift
+		;;
 	--install | -i)
 		INSTALL=true
 		shift
@@ -278,7 +289,7 @@ while [[ $# -gt 0 ]]; do
 		UNSAFE_RELOAD=true
 		shift
 		;;
-	--compile-schemas)
+	--compile-schemas | -c)
 		COMPILE_SCHEMAS=true
 		shift
 		;;
