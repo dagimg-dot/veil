@@ -36,7 +36,7 @@ jobs:
             - name: Build extension
               run: |
                   chmod +x scripts/build.sh
-                  ./scripts/build.sh --build
+                  ./scripts/build.sh --build --preserve-whitespace
 
             - name: Get versioninfo
               id: version
