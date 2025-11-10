@@ -58,6 +58,18 @@ export default class Veil extends Extension {
 			this.repositionIndicator();
 		});
 
+		this.setupSettingsHandlers();
+
+		const initialVisibility = this.stateManager.getVisibility();
+		this.panelManager.setVisibility(initialVisibility);
+		this.indicator.updateIcon(initialVisibility);
+
+		logger.info("Veil extension fully initialized");
+	}
+
+	private setupSettingsHandlers(): void {
+		if (!this.settings) return;
+
 		this.settingsHandlers.push(
 			this.settings.connect("changed::save-state", () => {
 				this.stateManager?.onSaveStateChanged();
@@ -87,12 +99,6 @@ export default class Veil extends Extension {
 				logger.debug("Auto-hide duration setting changed");
 			}),
 		);
-
-		const initialVisibility = this.stateManager.getVisibility();
-		this.panelManager.setVisibility(initialVisibility);
-		this.indicator.updateIcon(initialVisibility);
-
-		logger.info("Veil extension fully initialized");
 	}
 
 	private getIndicatorPosition(): number {
