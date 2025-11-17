@@ -262,18 +262,35 @@ export class PanelManager {
 		const animationEnabled = this.settings.get_boolean("animation-enabled");
 
 		if (animationEnabled) {
-			panelItems.forEach((item) => {
+			// Only animate items that are not visible at all
+			const itemsToAnimate = panelItems.filter(
+				(item) => !item.container.visible,
+			);
+
+			itemsToAnimate.forEach((item) => {
 				this.animationManager.fadeIn(item.container);
 			});
+
+			// Ensure all items are in the correct visible state
+			const itemsToFix = panelItems.filter(
+				(item) => item.container.visible && item.container.opacity < 255,
+			);
+
+			itemsToFix.forEach((item) => {
+				item.container.opacity = 255;
+			});
 		} else {
+			// Instantly show all items
 			panelItems.forEach((item) => {
 				item.container.visible = true;
 				item.container.opacity = 255;
+				item.container.set_translation(0, 0, 0);
 			});
 		}
 
 		logger.debug("Temporarily showing all items (hover)", {
 			count: panelItems.length,
+			animated: animationEnabled,
 		});
 	}
 

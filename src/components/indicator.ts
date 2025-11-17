@@ -45,12 +45,12 @@ export class VeilIndicator {
 				if (interactionMode === "click") {
 					logger.debug("Primary click on Veil indicator");
 					this.onToggleCallback?.();
+
+					if (this.indicator.menu) {
+						this.indicator.menu.close();
+					}
 				} else {
 					logger.debug("Click ignored in Hover mode");
-				}
-
-				if (this.indicator.menu) {
-					this.indicator.menu.close();
 				}
 			}
 		});
@@ -66,12 +66,12 @@ export class VeilIndicator {
 				if (interactionMode === "click") {
 					logger.debug("Touch begin on Veil indicator");
 					this.onToggleCallback?.();
+
+					if (this.indicator.menu) {
+						this.indicator.menu.close();
+					}
 				} else {
 					logger.debug("Touch ignored in Hover mode");
-				}
-
-				if (this.indicator.menu) {
-					this.indicator.menu.close();
 				}
 			}
 		});
