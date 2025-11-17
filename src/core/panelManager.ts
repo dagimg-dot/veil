@@ -1,5 +1,6 @@
 import type Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import type St from "gi://St";
 import type * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import { MainPanel, type PanelItem } from "../types/index.js";
@@ -16,6 +17,8 @@ export class PanelManager {
 	private onItemsChangedCallback?: (items: string[]) => void;
 	private stateManager: StateManager;
 	private initialSetupComplete = false;
+	private hoverHideTimerId: number | null = null;
+	private onHoverCompleteCallback?: () => void;
 
 	constructor(
 		settings: Gio.Settings,
@@ -246,6 +249,74 @@ export class PanelManager {
 		this.onItemsChangedCallback = callback;
 	}
 
+	setOnHoverComplete(callback: () => void) {
+		this.onHoverCompleteCallback = callback;
+	}
+
+	temporarilyShowItems() {
+		// Cancel any pending hide timer
+		this.cancelHoverHideTimer();
+
+		// Show all items without changing the saved state
+		const panelItems = this.getAllPanelItems();
+		const animationEnabled = this.settings.get_boolean("animation-enabled");
+
+		if (animationEnabled) {
+			panelItems.forEach((item) => {
+				this.animationManager.fadeIn(item.container);
+			});
+		} else {
+			panelItems.forEach((item) => {
+				item.container.visible = true;
+				item.container.opacity = 255;
+			});
+		}
+
+		logger.debug("Temporarily showing all items (hover)", {
+			count: panelItems.length,
+		});
+	}
+
+	temporarilyHideItemsWithDelay() {
+		// Cancel any existing timer
+		this.cancelHoverHideTimer();
+
+		// Get hover duration from settings (in seconds)
+		const hoverDuration = this.settings.get_int("hover-duration");
+
+		// Start a timer with configured duration before hiding
+		this.hoverHideTimerId = GLib.timeout_add_seconds(
+			GLib.PRIORITY_DEFAULT,
+			hoverDuration,
+			() => {
+				this.hoverHideTimerId = null;
+				this.restoreVisibilityToSavedState();
+				// Notify that hover is complete (to restore icon)
+				this.onHoverCompleteCallback?.();
+				return GLib.SOURCE_REMOVE;
+			},
+		);
+
+		logger.debug("Scheduled hover hide", { duration: hoverDuration });
+	}
+
+	private cancelHoverHideTimer() {
+		if (this.hoverHideTimerId !== null) {
+			GLib.Source.remove(this.hoverHideTimerId);
+			this.hoverHideTimerId = null;
+			logger.debug("Cancelled hover hide timer");
+		}
+	}
+
+	private restoreVisibilityToSavedState() {
+		// Restore to the actual saved visibility state
+		const currentVisibility = this.stateManager.getVisibility();
+		this.setVisibility(currentVisibility);
+		logger.debug("Restored visibility to saved state", {
+			visible: currentVisibility,
+		});
+	}
+
 	private handleNewItemVisibility(itemName: string, container: St.Widget) {
 		const currentVisibility = this.stateManager.getVisibility();
 		const visibleItems = this.settings.get_strv("visible-items");
@@ -268,6 +339,7 @@ export class PanelManager {
 	}
 
 	destroy() {
+		this.cancelHoverHideTimer();
 		this.animationManager.destroy();
 
 		if (this.addedHandlerId !== null) {

@@ -14,7 +14,10 @@ export class VeilIndicator {
 	private extension: Extension;
 	private iconWidget: St.Icon | null = null;
 	private onToggleCallback?: () => void;
+	private onHoverEnterCallback?: () => void;
+	private onHoverLeaveCallback?: () => void;
 	private settings: Gio.Settings;
+	private isHovering = false;
 
 	constructor(extension: Extension, settings: Gio.Settings) {
 		this.extension = extension;
@@ -23,6 +26,7 @@ export class VeilIndicator {
 		this.setupUI();
 		this.setupMenu();
 		this.setupClickHandler();
+		this.setupHoverHandlers();
 	}
 
 	private setupUI() {
@@ -35,9 +39,15 @@ export class VeilIndicator {
 			const button = event.get_button();
 
 			if (button === Clutter.BUTTON_PRIMARY) {
-				logger.debug("Primary click on Veil indicator");
+				const interactionMode = this.settings.get_string("interaction-mode");
 
-				this.onToggleCallback?.();
+				// Only handle clicks in Click mode
+				if (interactionMode === "click") {
+					logger.debug("Primary click on Veil indicator");
+					this.onToggleCallback?.();
+				} else {
+					logger.debug("Click ignored in Hover mode");
+				}
 
 				if (this.indicator.menu) {
 					this.indicator.menu.close();
@@ -50,9 +60,15 @@ export class VeilIndicator {
 			const eventType = event.type();
 
 			if (eventType === Clutter.EventType.TOUCH_BEGIN) {
-				logger.debug("Touch begin on Veil indicator");
+				const interactionMode = this.settings.get_string("interaction-mode");
 
-				this.onToggleCallback?.();
+				// Only handle touch in Click mode
+				if (interactionMode === "click") {
+					logger.debug("Touch begin on Veil indicator");
+					this.onToggleCallback?.();
+				} else {
+					logger.debug("Touch ignored in Hover mode");
+				}
 
 				if (this.indicator.menu) {
 					this.indicator.menu.close();
@@ -144,8 +160,52 @@ export class VeilIndicator {
 		logger.debug("Indicator repositioned", { position: quickSettingsIndex });
 	}
 
+	private setupHoverHandlers() {
+		this.indicator.connect("enter-event", () => {
+			const interactionMode = this.settings.get_string("interaction-mode");
+
+			// Only handle hover in Hover mode
+			if (interactionMode === "hover") {
+				logger.debug("Hover enter on Veil indicator");
+				this.isHovering = true;
+				// Change icon to visible state during hover
+				this.updateIcon(true);
+				this.onHoverEnterCallback?.();
+			}
+			return Clutter.EVENT_PROPAGATE;
+		});
+
+		this.indicator.connect("leave-event", () => {
+			const interactionMode = this.settings.get_string("interaction-mode");
+
+			// Only handle hover in Hover mode
+			if (interactionMode === "hover") {
+				logger.debug("Hover leave on Veil indicator");
+				this.isHovering = false;
+				this.onHoverLeaveCallback?.();
+			}
+			return Clutter.EVENT_PROPAGATE;
+		});
+	}
+
 	setOnToggle(callback: () => void) {
 		this.onToggleCallback = callback;
+	}
+
+	setOnHoverEnter(callback: () => void) {
+		this.onHoverEnterCallback = callback;
+	}
+
+	setOnHoverLeave(callback: () => void) {
+		this.onHoverLeaveCallback = callback;
+	}
+
+	restoreIconAfterHover() {
+		// Restore icon to hidden state after hover ends
+		if (!this.isHovering) {
+			this.updateIcon(false);
+			logger.debug("Icon restored to hidden state after hover");
+		}
 	}
 
 	getButton(): PanelMenu.Button {
