@@ -17,6 +17,7 @@ export interface GeneralPageChildren {
 	_interactionMode: Adw.ComboRow;
 	_autoHideEnabled: Adw.SwitchRow;
 	_autoHideDuration: Adw.SpinRow;
+	_hoverHideOnLeave: Adw.SwitchRow;
 	_hoverDuration: Adw.SpinRow;
 	_animationEnabled: Adw.SwitchRow;
 	_animationDuration: Adw.SpinRow;
@@ -40,6 +41,7 @@ export const GeneralPage = GObject.registerClass(
 			"interactionMode",
 			"autoHideEnabled",
 			"autoHideDuration",
+			"hoverHideOnLeave",
 			"hoverDuration",
 			"animationEnabled",
 			"animationDuration",
@@ -107,8 +109,12 @@ export const GeneralPage = GObject.registerClass(
 				children._autoHideEnabled.set_visible(isClickMode);
 				children._autoHideDuration.set_visible(isClickMode);
 
-				// Show hover duration only in Hover mode
-				children._hoverDuration.set_visible(!isClickMode);
+				// Show hover controls only in Hover mode
+				children._hoverHideOnLeave.set_visible(!isClickMode);
+				const hideOnLeaveEnabled = children._hoverHideOnLeave.get_active();
+				children._hoverDuration.set_visible(
+					!isClickMode && !hideOnLeaveEnabled,
+				);
 			};
 
 			children._interactionMode.connect("notify::selected", () => {
@@ -117,6 +123,17 @@ export const GeneralPage = GObject.registerClass(
 				settings.set_string("interaction-mode", mode);
 				updateControlVisibility();
 				logger.debug("Interaction mode changed", { mode });
+			});
+
+			// Bind hover hide on leave switch
+			const hoverHideOnLeave = settings.get_boolean("hover-hide-on-leave");
+			children._hoverHideOnLeave.set_active(hoverHideOnLeave);
+
+			children._hoverHideOnLeave.connect("notify::active", () => {
+				const isActive = children._hoverHideOnLeave.get_active();
+				settings.set_boolean("hover-hide-on-leave", isActive);
+				updateControlVisibility();
+				logger.debug("Hover hide on leave changed", { enabled: isActive });
 			});
 
 			// Bind auto-hide enabled switch

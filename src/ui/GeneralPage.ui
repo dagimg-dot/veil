@@ -134,6 +134,12 @@
           </object>
         </child>
         <child>
+          <object class="AdwSwitchRow" id="hoverHideOnLeave">
+            <property name="title" translatable="true">Hide on Leave</property>
+            <property name="subtitle" translatable="true">Immediately hide items when mouse leaves the indicator</property>
+          </object>
+        </child>
+        <child>
           <object class="AdwSpinRow" id="hoverDuration">
             <property name="title" translatable="true">Hover Duration (seconds)</property>
             <property name="subtitle" translatable="true">Time before hiding items when hover ends</property>

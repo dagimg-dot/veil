@@ -69,11 +69,16 @@
             <summary>Interaction mode</summary>
             <description>How to interact with the Veil indicator: 'click' for manual toggle or 'hover' for hover-to-expand</description>
         </key>
+        <key name="hover-hide-on-leave" type="b">
+            <default>true</default>
+            <summary>Hide on leave</summary>
+            <description>Immediately hide items when mouse leaves the indicator (Hover Mode)</description>
+        </key>
         <key name="hover-duration" type="i">
             <default>5</default>
             <range min="1" max="60"/>
             <summary>Hover duration</summary>
-            <description>Duration in seconds before hiding items after hover ends (Hover Mode)</description>
+            <description>Duration in seconds before hiding items after hover ends (Hover Mode, ignored when hide-on-leave is enabled)</description>
         </key>
     </schema>
 </schemalist>
