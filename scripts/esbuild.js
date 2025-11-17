@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as esbuild from "esbuild";
+import { esbuildPreserveWhitespacePlugin } from "esbuild-preserve-whitespace";
 
 esbuild.build({
 	entryPoints: ["src/**/*.ts"],
@@ -15,4 +16,5 @@ esbuild.build({
 	tsconfig: "tsconfig.json",
 	mainFields: ["module", "main"],
 	conditions: ["module", "import", "default"],
+	plugins: [esbuildPreserveWhitespacePlugin()],
 });
