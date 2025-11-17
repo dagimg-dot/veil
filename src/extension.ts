@@ -4,7 +4,6 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { VeilIndicator } from "./components/indicator.js";
 import { PanelManager } from "./core/panelManager.js";
 import { StateManager } from "./core/stateManager.js";
-import { MainPanel } from "./types/index.js";
 import { initializeLogger, logger } from "./utils/logger.js";
 
 export default class Veil extends Extension {
@@ -26,7 +25,7 @@ export default class Veil extends Extension {
 		const indicatorButton = this.indicator.getButton();
 
 		// Position indicator right before Quick Settings
-		const indicatorPosition = this.getIndicatorPosition();
+		const indicatorPosition = this.indicator.getIndicatorPosition();
 
 		Main.panel.addToStatusArea(
 			"veil",
@@ -49,13 +48,13 @@ export default class Veil extends Extension {
 			this.panelManager?.setVisibility(visible);
 			this.indicator?.updateIcon(visible);
 			// Reposition indicator after visibility changes
-			this.repositionIndicator();
+			this.indicator?.repositionIndicator();
 		});
 
 		this.panelManager.setOnItemsChanged((items) => {
 			logger.debug("Panel items changed", { count: items.length });
 			// Reposition indicator when items are added/removed
-			this.repositionIndicator();
+			this.indicator?.repositionIndicator();
 		});
 
 		this.setupSettingsHandlers();
@@ -99,58 +98,6 @@ export default class Veil extends Extension {
 				logger.debug("Auto-hide duration setting changed");
 			}),
 		);
-	}
-
-	private getIndicatorPosition(): number {
-		const rightBoxItems = MainPanel._rightBox.get_children();
-
-		for (let index = 0; index < rightBoxItems.length; index++) {
-			const item = rightBoxItems[index];
-
-			if (item.firstChild === Main.panel.statusArea.quickSettings) {
-				// Return the position of Quick Settings so indicator goes before it
-				return index;
-			}
-		}
-
-		// Fallback: if Quick Settings not found, put at the end
-		return rightBoxItems.length;
-	}
-
-	private repositionIndicator() {
-		if (!this.indicator) return;
-
-		const indicatorButton = this.indicator.getButton();
-		const container = indicatorButton.get_parent();
-
-		if (!container) return;
-
-		// Find Quick Settings position, accounting for our indicator being in the list
-		const rightBoxItems = MainPanel._rightBox.get_children();
-
-		let quickSettingsIndex = -1;
-
-		for (let index = 0; index < rightBoxItems.length; index++) {
-			const item = rightBoxItems[index];
-
-			if (item.firstChild === Main.panel.statusArea.quickSettings) {
-				quickSettingsIndex = index;
-				break;
-			}
-		}
-
-		if (quickSettingsIndex === -1) {
-			logger.warn("Could not find Quick Settings for repositioning");
-			return;
-		}
-
-		// Move indicator to be right before Quick Settings
-		MainPanel._rightBox.set_child_at_index(
-			container,
-			Math.max(0, quickSettingsIndex - 1),
-		);
-
-		logger.debug("Indicator repositioned", { position: quickSettingsIndex });
 	}
 
 	private handleToggle() {
