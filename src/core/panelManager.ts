@@ -278,26 +278,37 @@ export class PanelManager {
 	}
 
 	temporarilyHideItemsWithDelay() {
-		// Cancel any existing timer
-		this.cancelHoverHideTimer();
+		// Check if hide on leave is enabled
+		const hideOnLeave = this.settings.get_boolean("hover-hide-on-leave");
 
-		// Get hover duration from settings (in seconds)
-		const hoverDuration = this.settings.get_int("hover-duration");
+		if (hideOnLeave) {
+			// Hide immediately
+			this.restoreVisibilityToSavedState();
+			// Notify that hover is complete (to restore icon)
+			this.onHoverCompleteCallback?.();
+			logger.debug("Hide on leave: items hidden immediately");
+		} else {
+			// Cancel any existing timer
+			this.cancelHoverHideTimer();
 
-		// Start a timer with configured duration before hiding
-		this.hoverHideTimerId = GLib.timeout_add_seconds(
-			GLib.PRIORITY_DEFAULT,
-			hoverDuration,
-			() => {
-				this.hoverHideTimerId = null;
-				this.restoreVisibilityToSavedState();
-				// Notify that hover is complete (to restore icon)
-				this.onHoverCompleteCallback?.();
-				return GLib.SOURCE_REMOVE;
-			},
-		);
+			// Get hover duration from settings (in seconds)
+			const hoverDuration = this.settings.get_int("hover-duration");
 
-		logger.debug("Scheduled hover hide", { duration: hoverDuration });
+			// Start a timer with configured duration before hiding
+			this.hoverHideTimerId = GLib.timeout_add_seconds(
+				GLib.PRIORITY_DEFAULT,
+				hoverDuration,
+				() => {
+					this.hoverHideTimerId = null;
+					this.restoreVisibilityToSavedState();
+					// Notify that hover is complete (to restore icon)
+					this.onHoverCompleteCallback?.();
+					return GLib.SOURCE_REMOVE;
+				},
+			);
+
+			logger.debug("Scheduled hover hide", { duration: hoverDuration });
+		}
 	}
 
 	private cancelHoverHideTimer() {
