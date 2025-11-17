@@ -15,6 +15,7 @@ export class PanelManager {
 	private removedHandlerId: number | null = null;
 	private onItemsChangedCallback?: (items: string[]) => void;
 	private stateManager: StateManager;
+	private initialSetupComplete = false;
 
 	constructor(
 		settings: Gio.Settings,
@@ -46,17 +47,19 @@ export class PanelManager {
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item added", { actor });
 
-		// Get the item name and container for the newly added item
-		const child = actor.firstChild;
-		if (child) {
-			const itemName = this.getItemName(child as St.Widget);
-			if (
-				itemName &&
-				child !== MainPanel.statusArea.quickSettings &&
-				child !== this.veilIndicator
-			) {
-				// Apply visibility logic to the new item
-				this.handleNewItemVisibility(itemName, actor);
+		// Only apply automatic visibility handling after initial setup is complete
+		if (this.initialSetupComplete) {
+			const child = actor.firstChild;
+
+			if (child) {
+				const itemName = this.getItemName(child as St.Widget);
+				if (
+					itemName &&
+					child !== MainPanel.statusArea.quickSettings &&
+					child !== this.veilIndicator
+				) {
+					this.handleNewItemVisibility(itemName, actor);
+				}
 			}
 		}
 
@@ -157,6 +160,9 @@ export class PanelManager {
 	}
 
 	setVisibility(visible: boolean) {
+		// Mark initial setup as complete after first setVisibility call
+		this.initialSetupComplete = true;
+
 		const panelItems = this.getAllPanelItems();
 		const visibleItems = this.settings.get_strv("visible-items");
 		const animationEnabled = this.settings.get_boolean("animation-enabled");
