@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MOUNT_POINT="/mnt/host/veil"
-HOST_SPEC="jd@10.242.163.81:/home/jd/JDrive/Projects/TYPESCRIPT/gnome-extensions/veil"
+HOST_SPEC="jd@10.159.17.101:/home/jd/JDrive/Projects/TYPESCRIPT/gnome-extensions/veil"
 
 mkdir -p "$MOUNT_POINT"
 
