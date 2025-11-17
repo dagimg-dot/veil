@@ -38,7 +38,11 @@ export default class Veil extends Extension {
 			position: indicatorPosition,
 		});
 
-		this.panelManager = new PanelManager(this.settings, indicatorButton);
+		this.panelManager = new PanelManager(
+			this.settings,
+			indicatorButton,
+			this.stateManager,
+		);
 
 		this.indicator.setOnToggle(() => {
 			this.handleToggle();

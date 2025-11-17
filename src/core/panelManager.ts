@@ -5,6 +5,7 @@ import type * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import { MainPanel, type PanelItem } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { AnimationManager } from "./animationManager.js";
+import type { StateManager } from "./stateManager.js";
 
 export class PanelManager {
 	private settings: Gio.Settings;
@@ -13,10 +14,16 @@ export class PanelManager {
 	private addedHandlerId: number | null = null;
 	private removedHandlerId: number | null = null;
 	private onItemsChangedCallback?: (items: string[]) => void;
+	private stateManager: StateManager;
 
-	constructor(settings: Gio.Settings, veilIndicator: PanelMenu.Button) {
+	constructor(
+		settings: Gio.Settings,
+		veilIndicator: PanelMenu.Button,
+		stateManager: StateManager,
+	) {
 		this.settings = settings;
 		this.veilIndicator = veilIndicator;
+		this.stateManager = stateManager;
 		this.animationManager = new AnimationManager(settings);
 		this.setupListeners();
 		this.updateAllItemsList();
@@ -38,6 +45,21 @@ export class PanelManager {
 
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item added", { actor });
+
+		// Get the item name and container for the newly added item
+		const child = actor.firstChild;
+		if (child) {
+			const itemName = this.getItemName(child as St.Widget);
+			if (
+				itemName &&
+				child !== MainPanel.statusArea.quickSettings &&
+				child !== this.veilIndicator
+			) {
+				// Apply visibility logic to the new item
+				this.handleNewItemVisibility(itemName, actor);
+			}
+		}
+
 		this.updateAllItemsList();
 		this.onItemsChangedCallback?.(this.getAllItemNames());
 	}
@@ -216,6 +238,27 @@ export class PanelManager {
 
 	setOnItemsChanged(callback: (items: string[]) => void) {
 		this.onItemsChangedCallback = callback;
+	}
+
+	private handleNewItemVisibility(itemName: string, container: St.Widget) {
+		const currentVisibility = this.stateManager.getVisibility();
+		const visibleItems = this.settings.get_strv("visible-items");
+
+		if (currentVisibility) {
+			// Overall visibility is true (all items shown): show the new item
+			container.visible = true;
+			container.opacity = 255;
+			logger.debug("New item shown (visibility=true)", { itemName });
+		} else {
+			// Overall visibility is false (items hidden): show only if in visible-items list
+			const shouldBeVisible = visibleItems.includes(itemName);
+			container.visible = shouldBeVisible;
+			container.opacity = 255;
+			logger.debug("New item visibility set based on visible-items", {
+				itemName,
+				visible: shouldBeVisible,
+			});
+		}
 	}
 
 	destroy() {
