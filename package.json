@@ -1,6 +1,6 @@
 {
   "name": "veil",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "author": "Dagim G. Astatkie",
   "type": "module",
   "license": "MIT",
@@ -19,10 +19,8 @@
     "dev": "bun check && ./scripts/build.sh --build --unsafe-reload",
     "dev:nested": "bun build:install && ./scripts/dev-run.sh",
     "build": "./scripts/build.sh --build",
-    "build:preserve-whitespace": "./scripts/build.sh --build --preserve-whitespace",
     "build:install": "bun check && ./scripts/build.sh --build --install",
     "transpile": "node scripts/esbuild.js",
-    "transpile:legacy": "node scripts/gnext-transpiler.js",
     "setup": "./scripts/setup.sh",
     "log": "./scripts/log.sh -f",
     "log:all": "./scripts/log.sh",
