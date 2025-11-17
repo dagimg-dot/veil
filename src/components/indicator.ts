@@ -42,6 +42,21 @@ export class VeilIndicator {
 				}
 			}
 		});
+
+		// Add touch support
+		this.indicator.connect("touch-event", (_actor, event) => {
+			const eventType = event.type();
+
+			if (eventType === Clutter.EventType.TOUCH_BEGIN) {
+				logger.debug("Touch begin on Veil indicator");
+
+				this.onToggleCallback?.();
+
+				if (this.indicator.menu) {
+					this.indicator.menu.close();
+				}
+			}
+		});
 	}
 
 	private setupMenu() {
