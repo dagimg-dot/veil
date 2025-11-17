@@ -35,13 +35,13 @@
         <key name="auto-hide-enabled" type="b">
             <default>false</default>
             <summary>Auto-hide enabled</summary>
-            <description>Automatically hide panel items after a specified duration</description>
+            <description>Automatically hide panel items after a specified duration (Click Mode only)</description>
         </key>
         <key name="auto-hide-duration" type="i">
             <default>30</default>
             <range min="1" max="300"/>
             <summary>Auto-hide duration</summary>
-            <description>Duration in seconds before automatically hiding panel items</description>
+            <description>Duration in seconds before automatically hiding panel items (Click Mode)</description>
         </key>
         <key name="animation-enabled" type="b">
             <default>true</default>
@@ -63,6 +63,17 @@
             <default>''</default>
             <summary>Custom close icon</summary>
             <description>Path to custom SVG icon for close state (empty uses default)</description>
+        </key>
+        <key name="interaction-mode" type="s">
+            <default>'click'</default>
+            <summary>Interaction mode</summary>
+            <description>How to interact with the Veil indicator: 'click' for manual toggle or 'hover' for hover-to-expand</description>
+        </key>
+        <key name="hover-duration" type="i">
+            <default>5</default>
+            <range min="1" max="60"/>
+            <summary>Hover duration</summary>
+            <description>Duration in seconds before hiding items after hover ends (Hover Mode)</description>
         </key>
     </schema>
 </schemalist>

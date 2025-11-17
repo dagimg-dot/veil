@@ -14,8 +14,10 @@ export interface GeneralPageChildren {
 	_closeIconButton: Gtk.Button;
 	_openIconClearButton: Gtk.Button;
 	_closeIconClearButton: Gtk.Button;
+	_interactionMode: Adw.ComboRow;
 	_autoHideEnabled: Adw.SwitchRow;
 	_autoHideDuration: Adw.SpinRow;
+	_hoverDuration: Adw.SpinRow;
 	_animationEnabled: Adw.SwitchRow;
 	_animationDuration: Adw.SpinRow;
 	_loggingLevel: Adw.ComboRow;
@@ -35,8 +37,10 @@ export const GeneralPage = GObject.registerClass(
 			"closeIconButton",
 			"openIconClearButton",
 			"closeIconClearButton",
+			"interactionMode",
 			"autoHideEnabled",
 			"autoHideDuration",
+			"hoverDuration",
 			"animationEnabled",
 			"animationDuration",
 			"loggingLevel",
@@ -89,6 +93,32 @@ export const GeneralPage = GObject.registerClass(
 				"Icon shown when items are visible",
 			);
 
+			// Bind interaction mode combo row
+			const interactionMode = settings.get_string("interaction-mode");
+			children._interactionMode.set_selected(
+				interactionMode === "hover" ? 1 : 0,
+			);
+
+			const updateControlVisibility = () => {
+				const selectedMode = children._interactionMode.get_selected();
+				const isClickMode = selectedMode === 0;
+
+				// Show auto-hide controls only in Click mode
+				children._autoHideEnabled.set_visible(isClickMode);
+				children._autoHideDuration.set_visible(isClickMode);
+
+				// Show hover duration only in Hover mode
+				children._hoverDuration.set_visible(!isClickMode);
+			};
+
+			children._interactionMode.connect("notify::selected", () => {
+				const selectedIndex = children._interactionMode.get_selected();
+				const mode = selectedIndex === 1 ? "hover" : "click";
+				settings.set_string("interaction-mode", mode);
+				updateControlVisibility();
+				logger.debug("Interaction mode changed", { mode });
+			});
+
 			// Bind auto-hide enabled switch
 			const autoHideEnabled = settings.get_boolean("auto-hide-enabled");
 			children._autoHideEnabled.set_active(autoHideEnabled);
@@ -110,6 +140,19 @@ export const GeneralPage = GObject.registerClass(
 				settings.set_int("auto-hide-duration", value);
 				logger.debug("Auto-hide duration changed", { duration: value });
 			});
+
+			// Bind hover duration spin row
+			const hoverDuration = settings.get_int("hover-duration");
+			children._hoverDuration.set_value(hoverDuration);
+
+			children._hoverDuration.connect("notify::value", () => {
+				const value = children._hoverDuration.get_value();
+				settings.set_int("hover-duration", value);
+				logger.debug("Hover duration changed", { duration: value });
+			});
+
+			// Set initial control visibility
+			updateControlVisibility();
 
 			// Bind animation enabled switch
 			const animationEnabled = settings.get_boolean("animation-enabled");

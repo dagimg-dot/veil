@@ -48,6 +48,18 @@ export default class Veil extends Extension {
 			this.handleToggle();
 		});
 
+		this.indicator.setOnHoverEnter(() => {
+			this.handleHoverEnter();
+		});
+
+		this.indicator.setOnHoverLeave(() => {
+			this.handleHoverLeave();
+		});
+
+		this.panelManager.setOnHoverComplete(() => {
+			this.handleHoverComplete();
+		});
+
 		this.stateManager.setOnVisibilityChanged((visible) => {
 			this.panelManager?.setVisibility(visible);
 			this.indicator?.updateIcon(visible);
@@ -113,6 +125,37 @@ export default class Veil extends Extension {
 		const newVisibility = this.stateManager.toggleVisibility();
 
 		logger.debug("Visibility toggled", { newVisibility });
+	}
+
+	private handleHoverEnter() {
+		if (!this.panelManager) {
+			logger.warn("Cannot handle hover enter: panelManager not initialized");
+			return;
+		}
+
+		this.panelManager.temporarilyShowItems();
+		logger.debug("Hover enter: temporarily showing items");
+	}
+
+	private handleHoverLeave() {
+		if (!this.panelManager) {
+			logger.warn("Cannot handle hover leave: panelManager not initialized");
+			return;
+		}
+
+		this.panelManager.temporarilyHideItemsWithDelay();
+		logger.debug("Hover leave: scheduling hide with delay");
+	}
+
+	private handleHoverComplete() {
+		if (!this.indicator) {
+			logger.warn("Cannot handle hover complete: indicator not initialized");
+			return;
+		}
+
+		// Restore icon to hidden state after hover completes
+		this.indicator.restoreIconAfterHover();
+		logger.debug("Hover complete: icon restored");
 	}
 
 	disable() {
