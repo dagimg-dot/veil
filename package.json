@@ -17,7 +17,7 @@
   },
   "scripts": {
     "dev": "bun check && ./scripts/build.sh --build --unsafe-reload",
-    "dev:nested": "bun build:install && ./scripts/dev-run.sh",
+    "dev:nested": "bun build:install && ./scripts/nested-dev.sh",
     "build": "./scripts/build.sh --build",
     "build:install": "bun check && ./scripts/build.sh --build --install",
     "transpile": "node scripts/esbuild.js",
