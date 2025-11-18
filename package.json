@@ -20,7 +20,6 @@
     "dev:nested": "bun build:install && ./scripts/nested-dev.sh",
     "build": "./scripts/build.sh --build",
     "build:install": "bun check && ./scripts/build.sh --build --install",
-    "transpile": "node scripts/esbuild.js",
     "setup": "./scripts/setup.sh",
     "log": "./scripts/log.sh -f",
     "log:all": "./scripts/log.sh",
