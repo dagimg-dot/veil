@@ -13,3 +13,4 @@ node_modules/
 result
 .DS_Store
 .vscode
+scripts/dev-*.sh
