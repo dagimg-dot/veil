@@ -9,7 +9,7 @@
         "@girs/gnome-shell": "^48.0.4",
         "esbuild": "^0.25.12",
         "esbuild-plugin-tsc": "^0.5.0",
-        "esbuild-preserve-whitespace": "^1.0.0",
+        "esbuild-preserve-whitespace": "^1.1.1",
         "glob": "^11.0.3",
         "typescript": "^5.9.3",
       },
@@ -194,7 +194,7 @@
 
     "esbuild-plugin-tsc": ["esbuild-plugin-tsc@0.5.0", "", { "dependencies": { "strip-comments": "^2.0.1" }, "peerDependencies": { "typescript": "^4.0.0 || ^5.0.0" } }, "sha512-t9j90NnMhAGWzS0SKX3zNa/XeWcUanqKaFe36CSmXiB2nYFdaSzKY9pBZTvGV7NGImxE1BktOOlVpQyYnUTVGg=="],
 
-    "esbuild-preserve-whitespace": ["esbuild-preserve-whitespace@1.0.0", "", { "dependencies": { "glob": "^11.0.0" }, "peerDependencies": { "esbuild": "^0.19.0" } }, "sha512-hvZq5ya3Gy8ZAa1Lhcav+6tKPtlgMMX/AAJixkKg9QLaBDPgh6PeqRaL2mNENvg/MDCEL9e3IFvFKzK6ry5Btg=="],
+    "esbuild-preserve-whitespace": ["esbuild-preserve-whitespace@1.1.1", "", { "dependencies": { "glob": "^11.0.0" }, "peerDependencies": { "esbuild": "^0.19.0" } }, "sha512-BUb/jJ7L5YQoLrD+o+1j93lxtbD/3qijzDMXmVkJjIXoxpSvT87ajo/8rSiiiti+7d1qLCzo3oTja5s8IwJc2w=="],
 
     "foreground-child": ["foreground-child@3.3.1", "", { "dependencies": { "cross-spawn": "^7.0.6", "signal-exit": "^4.0.1" } }, "sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw=="],
 
