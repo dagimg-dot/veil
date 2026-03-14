@@ -19,6 +19,8 @@ export class PanelManager {
 	private initialSetupComplete = false;
 	private hoverHideTimerId: number | null = null;
 	private onHoverCompleteCallback?: () => void;
+	private nameChangeHandlers: Map<St.Widget, number> = new Map();
+	private firstChildHandlers: Map<St.Widget, number> = new Map();
 
 	constructor(
 		settings: Gio.Settings,
@@ -50,28 +52,61 @@ export class PanelManager {
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item added", { actor });
 
-		// Only apply automatic visibility handling after initial setup is complete
 		if (this.initialSetupComplete) {
-			const child = actor.firstChild;
-
-			if (child) {
-				const itemName = this.getItemName(child as St.Widget);
-				if (
-					itemName &&
-					child !== MainPanel.statusArea.quickSettings &&
-					child !== this.veilIndicator
-				) {
-					this.handleNewItemVisibility(itemName, actor);
-				}
-			}
+			this.applyNewItemVisibility(actor);
 		}
 
 		this.updateAllItemsList();
 		this.onItemsChangedCallback?.(this.getAllItemNames());
 	}
 
+	private applyNewItemVisibility(actor: St.Widget) {
+		const child = actor.firstChild;
+
+		if (!child) {
+			// Container was added before its child widget; defer until child arrives
+			const handlerId = actor.connect("notify::first-child", () => {
+				actor.disconnect(handlerId);
+				this.firstChildHandlers.delete(actor);
+				this.applyNewItemVisibility(actor);
+			});
+			this.firstChildHandlers.set(actor, handlerId);
+			return;
+		}
+
+		if (
+			child === MainPanel.statusArea.quickSettings ||
+			child === this.veilIndicator
+		) {
+			return;
+		}
+
+		const itemName = this.getItemName(child as St.Widget);
+		if (itemName) {
+			this.handleNewItemVisibility(itemName, actor);
+		}
+
+		this.watchForNameChange(child as St.Widget, actor);
+	}
+
 	private _onItemRemoved(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item removed", { actor });
+
+		const firstChildHandler = this.firstChildHandlers.get(actor);
+		if (firstChildHandler !== undefined) {
+			actor.disconnect(firstChildHandler);
+			this.firstChildHandlers.delete(actor);
+		}
+
+		const child = actor.firstChild;
+		if (child) {
+			const nameHandler = this.nameChangeHandlers.get(child as St.Widget);
+			if (nameHandler !== undefined) {
+				(child as St.Widget).disconnect(nameHandler);
+				this.nameChangeHandlers.delete(child as St.Widget);
+			}
+		}
+
 		this.updateAllItemsList();
 		this.onItemsChangedCallback?.(this.getAllItemNames());
 	}
@@ -183,6 +218,13 @@ export class PanelManager {
 				});
 			}
 		} else {
+			// Watch for accessible_name changes on existing items so we can
+			// re-apply visibility once their real name is available (fixes items
+			// whose accessible_name is not yet set at enable / hide time).
+			panelItems.forEach((item) => {
+				this.watchForNameChange(item.actor, item.container);
+			});
+
 			// When hiding, first fade out all items, then fade back in the ones that should remain visible
 			if (animationEnabled) {
 				// First, fade out all items
@@ -345,6 +387,25 @@ export class PanelManager {
 		});
 	}
 
+	private watchForNameChange(child: St.Widget, container: St.Widget) {
+		if (this.nameChangeHandlers.has(child)) {
+			return;
+		}
+
+		const handlerId = child.connect("notify::accessible-name", () => {
+			const newName = this.getItemName(child);
+			if (newName) {
+				logger.debug("Item accessible_name changed, re-applying visibility", {
+					newName,
+				});
+				this.handleNewItemVisibility(newName, container);
+				this.updateAllItemsList();
+				this.onItemsChangedCallback?.(this.getAllItemNames());
+			}
+		});
+		this.nameChangeHandlers.set(child, handlerId);
+	}
+
 	private handleNewItemVisibility(itemName: string, container: St.Widget) {
 		const currentVisibility = this.stateManager.getVisibility();
 		const visibleItems = this.settings.get_strv("visible-items");
@@ -369,6 +430,16 @@ export class PanelManager {
 	destroy() {
 		this.cancelHoverHideTimer();
 		this.animationManager.destroy();
+
+		for (const [widget, handlerId] of this.nameChangeHandlers.entries()) {
+			widget.disconnect(handlerId);
+		}
+		this.nameChangeHandlers.clear();
+
+		for (const [widget, handlerId] of this.firstChildHandlers.entries()) {
+			widget.disconnect(handlerId);
+		}
+		this.firstChildHandlers.clear();
 
 		if (this.addedHandlerId !== null) {
 			MainPanel._rightBox.disconnect(this.addedHandlerId);
