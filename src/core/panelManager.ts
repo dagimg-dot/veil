@@ -163,54 +163,36 @@ export class PanelManager {
 	}
 
 	setVisibility(visible: boolean) {
-		// Mark initial setup as complete after first setVisibility call
 		this.initialSetupComplete = true;
 
 		const panelItems = this.getAllPanelItems();
 		const visibleItems = this.settings.get_strv("visible-items");
 		const animationEnabled = this.settings.get_boolean("animation-enabled");
+		const animateAllItems = this.settings.get_boolean("animate-all-items");
+
+		// Determine which items to animate vs show instantly
+		const itemsToAnimate = animateAllItems
+			? panelItems
+			: panelItems.filter((item) => !visibleItems.includes(item.name));
+
+		const itemsToShowInstantly = animateAllItems
+			? panelItems.filter((item) => visibleItems.includes(item.name))
+			: [];
 
 		if (visible) {
-			// When showing all items, fade them in
+			// Showing: animate affected items
 			if (animationEnabled) {
-				panelItems.forEach((item) => {
-					this.animationManager.fadeIn(item.container);
-				});
+				this.fadeInItems(itemsToAnimate);
 			} else {
-				panelItems.forEach((item) => {
-					item.container.visible = true;
-					item.container.opacity = 255;
-				});
+				this.showItemsInstantly([...itemsToAnimate, ...itemsToShowInstantly]);
 			}
 		} else {
-			// When hiding, first fade out all items, then fade back in the ones that should remain visible
+			// Hiding: animate items being hidden, then restore always-visible
 			if (animationEnabled) {
-				// First, fade out all items
-				const allFadeOutPromises: Promise<void>[] = [];
-
-				panelItems.forEach((item) => {
-					allFadeOutPromises.push(
-						this.animationManager.fadeOut(item.container),
-					);
-				});
-
-				// After all fade out animations complete, fade in the visible items
-				Promise.all(allFadeOutPromises).then(() => {
-					const itemsToShow = panelItems.filter((item) =>
-						visibleItems.includes(item.name),
-					);
-
-					itemsToShow.forEach((item) => {
-						this.animationManager.fadeIn(item.container);
-					});
-				});
+				this.fadeOutItemsAndRestore(itemsToAnimate, itemsToShowInstantly);
 			} else {
-				// Instant visibility change
-				panelItems.forEach((item) => {
-					const shouldBeVisible = visibleItems.includes(item.name);
-					item.container.visible = shouldBeVisible;
-					item.container.opacity = 255;
-				});
+				this.hideItemsInstantly(itemsToAnimate);
+				this.showItemsInstantly(itemsToShowInstantly);
 			}
 		}
 
@@ -219,6 +201,40 @@ export class PanelManager {
 			totalItems: panelItems.length,
 			visibleItemsCount: visibleItems.length,
 			animated: animationEnabled,
+		});
+	}
+
+	private showItemsInstantly(items: PanelItem[]) {
+		items.forEach((item) => {
+			item.container.visible = true;
+			item.container.opacity = 255;
+		});
+	}
+
+	private hideItemsInstantly(items: PanelItem[]) {
+		items.forEach((item) => {
+			item.container.visible = false;
+		});
+	}
+
+	private fadeInItems(items: PanelItem[]) {
+		items.forEach((item) => {
+			this.animationManager.fadeIn(item.container);
+		});
+	}
+
+	private fadeOutItemsAndRestore(
+		itemsToHide: PanelItem[],
+		itemsToRestore: PanelItem[],
+	) {
+		const fadeOutPromises = itemsToHide.map((item) =>
+			this.animationManager.fadeOut(item.container),
+		);
+
+		Promise.all(fadeOutPromises).then(() => {
+			// Fade in the always-visible items (itemsToRestore)
+			// itemsToHide stay hidden
+			this.fadeInItems(itemsToRestore);
 		});
 	}
 

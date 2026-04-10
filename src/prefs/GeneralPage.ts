@@ -20,6 +20,7 @@ export interface GeneralPageChildren {
 	_hoverHideOnLeave: Adw.SwitchRow;
 	_hoverDuration: Adw.SpinRow;
 	_animationEnabled: Adw.SwitchRow;
+	_animateAllItems: Adw.SwitchRow;
 	_animationDuration: Adw.SpinRow;
 	_loggingLevel: Adw.ComboRow;
 	_journalctlCommand: Adw.EntryRow;
@@ -44,6 +45,7 @@ export const GeneralPage = GObject.registerClass(
 			"hoverHideOnLeave",
 			"hoverDuration",
 			"animationEnabled",
+			"animateAllItems",
 			"animationDuration",
 			"loggingLevel",
 			"journalctlCommand",
@@ -175,11 +177,22 @@ export const GeneralPage = GObject.registerClass(
 			const animationEnabled = settings.get_boolean("animation-enabled");
 			children._animationEnabled.set_active(animationEnabled);
 			children._animationDuration.set_sensitive(animationEnabled);
+			children._animateAllItems.set_sensitive(animationEnabled);
+			// If animations disabled, ensure animateAllItems is also disabled
+			if (!animationEnabled && children._animateAllItems.get_active()) {
+				children._animateAllItems.set_active(false);
+				settings.set_boolean("animate-all-items", false);
+			}
 
 			children._animationEnabled.connect("notify::active", () => {
 				const isActive = children._animationEnabled.get_active();
 				settings.set_boolean("animation-enabled", isActive);
 				children._animationDuration.set_sensitive(isActive);
+				children._animateAllItems.set_sensitive(isActive);
+				if (!isActive && children._animateAllItems.get_active()) {
+					children._animateAllItems.set_active(false);
+					settings.set_boolean("animate-all-items", false);
+				}
 				logger.debug("Animation enabled changed", { enabled: isActive });
 			});
 
@@ -191,6 +204,16 @@ export const GeneralPage = GObject.registerClass(
 				const value = children._animationDuration.get_value();
 				settings.set_int("animation-duration", value);
 				logger.debug("Animation duration changed", { duration: value });
+			});
+
+			// Bind animate all items switch
+			const animateAllItems = settings.get_boolean("animate-all-items");
+			children._animateAllItems.set_active(animateAllItems);
+
+			children._animateAllItems.connect("notify::active", () => {
+				const isActive = children._animateAllItems.get_active();
+				settings.set_boolean("animate-all-items", isActive);
+				logger.debug("Animate all items changed", { enabled: isActive });
 			});
 
 			// Bind logging level combo

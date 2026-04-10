@@ -167,6 +167,12 @@
           </object>
         </child>
         <child>
+          <object class="AdwSwitchRow" id="animateAllItems">
+            <property name="title" translatable="true">Animate Always-Visible Items</property>
+            <property name="subtitle" translatable="true">Animate items marked as always visible (more distracting)</property>
+          </object>
+        </child>
+        <child>
           <object class="AdwSpinRow" id="animationDuration">
             <property name="title" translatable="true">Duration (milliseconds)</property>
             <property name="subtitle" translatable="true">Animation speed (lower is faster)</property>

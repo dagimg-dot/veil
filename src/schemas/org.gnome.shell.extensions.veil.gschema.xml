@@ -54,6 +54,11 @@
             <summary>Animation duration</summary>
             <description>Duration of fade animations in milliseconds</description>
         </key>
+        <key name="animate-all-items" type="b">
+            <default>false</default>
+            <summary>Animate always-visible items</summary>
+            <description>Animate items marked as always visible when hiding/showing panel (more distracting)</description>
+        </key>
         <key name="custom-open-icon" type="s">
             <default>''</default>
             <summary>Custom open icon</summary>
