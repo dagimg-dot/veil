@@ -20,6 +20,9 @@ export class PanelManager {
 	private hoverHideTimerId: number | null = null;
 	private onHoverCompleteCallback?: () => void;
 	private items: PanelItem[] = [];
+	// Watch for late accessible_name changes
+	private nameChangeHandlers: Map<St.Widget, number> = new Map();
+	private firstChildHandlers: Map<St.Widget, number> = new Map();
 
 	constructor(
 		settings: Gio.Settings,
@@ -59,34 +62,85 @@ export class PanelManager {
 				const existing = this.items.find((i) => i.name === itemName);
 				if (existing) {
 					existing.originalVisible = actor.visible;
-					logger.debug("Updated original visibility for item", {
-						itemName,
-						originalVisible: actor.visible,
-					});
 				}
 			}
 		}
 
-		// Only apply automatic visibility handling after initial setup is complete
 		if (this.initialSetupComplete) {
-			if (child) {
-				const itemName = this.getItemName(child as St.Widget);
-				if (
-					itemName &&
-					child !== MainPanel.statusArea.quickSettings &&
-					child !== this.veilIndicator
-				) {
-					this.handleNewItemVisibility(itemName, actor);
-				}
-			}
+			this.applyNewItemVisibility(actor);
 		}
 
 		this.updateAllItemsList();
 		this.onItemsChangedCallback?.(this.getAllItemNames());
 	}
 
+	private applyNewItemVisibility(actor: St.Widget) {
+		const child = actor.firstChild;
+
+		if (!child) {
+			// Container was added before its child widget; defer until child arrives
+			const handlerId = actor.connect("notify::first-child", () => {
+				actor.disconnect(handlerId);
+				this.firstChildHandlers.delete(actor);
+				this.applyNewItemVisibility(actor);
+			});
+			this.firstChildHandlers.set(actor, handlerId);
+			return;
+		}
+
+		if (
+			child === MainPanel.statusArea.quickSettings ||
+			child === this.veilIndicator
+		) {
+			return;
+		}
+
+		const itemName = this.getItemName(child as St.Widget);
+		if (itemName) {
+			this.handleNewItemVisibility(itemName, actor);
+		}
+
+		this.watchForNameChange(child as St.Widget, actor);
+	}
+
+	private watchForNameChange(child: St.Widget, actor: St.Widget) {
+		// Skip if we already have a handler for this item
+		if (this.nameChangeHandlers.has(child)) {
+			return;
+		}
+
+		const handlerId = child.connect("notify::accessible-name", () => {
+			// Re-apply visibility now that we have a name
+			const itemName = this.getItemName(child);
+			if (itemName) {
+				this.handleNewItemVisibility(itemName, actor);
+			}
+			// Disconnect after name is set (one-time watcher)
+			child.disconnect(handlerId);
+			this.nameChangeHandlers.delete(child);
+		});
+		this.nameChangeHandlers.set(child, handlerId);
+	}
+
 	private _onItemRemoved(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item removed", { actor });
+
+		// Clean up handlers
+		const firstChildHandler = this.firstChildHandlers.get(actor);
+		if (firstChildHandler !== undefined) {
+			actor.disconnect(firstChildHandler);
+			this.firstChildHandlers.delete(actor);
+		}
+
+		const child = actor.firstChild;
+		if (child) {
+			const nameHandler = this.nameChangeHandlers.get(child as St.Widget);
+			if (nameHandler !== undefined) {
+				(child as St.Widget).disconnect(nameHandler);
+				this.nameChangeHandlers.delete(child as St.Widget);
+			}
+		}
+
 		this.updateAllItemsList();
 		this.onItemsChangedCallback?.(this.getAllItemNames());
 	}
@@ -210,6 +264,12 @@ export class PanelManager {
 			}
 		} else {
 			// Hiding: animate items being hidden, then restore always-visible
+			// Watch for accessible_name changes on existing items so we can
+			// re-apply visibility once their real name is available
+			panelItems.forEach((item) => {
+				this.watchForNameChange(item.actor, item.container);
+			});
+
 			if (animationEnabled) {
 				this.fadeOutItemsAndRestore(itemsToAnimate, itemsToShowInstantly);
 			} else {
