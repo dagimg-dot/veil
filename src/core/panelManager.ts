@@ -19,6 +19,7 @@ export class PanelManager {
 	private initialSetupComplete = false;
 	private hoverHideTimerId: number | null = null;
 	private onHoverCompleteCallback?: () => void;
+	private items: PanelItem[] = [];
 
 	constructor(
 		settings: Gio.Settings,
@@ -50,10 +51,24 @@ export class PanelManager {
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item added", { actor });
 
+		// Update original visibility when item appears (handles Search Light appearing later)
+		const child = actor.firstChild;
+		if (child) {
+			const itemName = this.getItemName(child as St.Widget);
+			if (itemName) {
+				const existing = this.items.find((i) => i.name === itemName);
+				if (existing) {
+					existing.originalVisible = actor.visible;
+					logger.debug("Updated original visibility for item", {
+						itemName,
+						originalVisible: actor.visible,
+					});
+				}
+			}
+		}
+
 		// Only apply automatic visibility handling after initial setup is complete
 		if (this.initialSetupComplete) {
-			const child = actor.firstChild;
-
 			if (child) {
 				const itemName = this.getItemName(child as St.Widget);
 				if (
@@ -77,6 +92,8 @@ export class PanelManager {
 	}
 
 	private updateAllItemsList() {
+		// Track items with their initial visibility
+		this.items = this.getAllPanelItems();
 		const itemNames = this.getAllItemNames();
 		this.settings.set_strv("all-items", itemNames);
 		logger.debug("Updated all-items list", { count: itemNames.length });
@@ -131,10 +148,15 @@ export class PanelManager {
 				const name = this.getItemName(child as St.Widget);
 
 				if (name) {
+					// Preserve original visibility from tracked items
+					const existing = this.items.find((i) => i.name === name);
+					const originalVis = existing?.originalVisible ?? item.visible;
+
 					items.push({
 						name,
 						actor: child as St.Widget,
 						container: item as St.Widget,
+						originalVisible: originalVis,
 					});
 				}
 			},
@@ -205,9 +227,25 @@ export class PanelManager {
 	}
 
 	private showItemsInstantly(items: PanelItem[]) {
+		const visibleItems = this.settings.get_strv("visible-items");
+
 		items.forEach((item) => {
-			item.container.visible = true;
-			item.container.opacity = 255;
+			// If initially hidden (e.g. by Search Light), respect that
+			if (item.originalVisible === false) {
+				logger.debug("Skipping show - item was hidden at detection", {
+					itemName: item.name,
+				});
+				return;
+			}
+
+			// If it was visible at detection (or undefined), show by default
+			const userWantsVisible = visibleItems.includes(item.name);
+			const wasVisible =
+				item.originalVisible === true || item.originalVisible === undefined;
+			if (userWantsVisible || wasVisible) {
+				item.container.visible = true;
+				item.container.opacity = 255;
+			}
 		});
 	}
 
@@ -218,8 +256,24 @@ export class PanelManager {
 	}
 
 	private fadeInItems(items: PanelItem[]) {
+		const visibleItems = this.settings.get_strv("visible-items");
+
 		items.forEach((item) => {
-			this.animationManager.fadeIn(item.container);
+			// If initially hidden (e.g. by Search Light), respect that
+			if (item.originalVisible === false) {
+				logger.debug("Skipping fade - item was hidden at detection", {
+					itemName: item.name,
+				});
+				return;
+			}
+
+			// If it was visible at detection (or undefined), show by default
+			const userWantsVisible = visibleItems.includes(item.name);
+			const wasVisible =
+				item.originalVisible === true || item.originalVisible === undefined;
+			if (userWantsVisible || wasVisible) {
+				this.animationManager.fadeIn(item.container);
+			}
 		});
 	}
 

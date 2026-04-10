@@ -12,4 +12,5 @@ export interface PanelItem {
 	name: string;
 	actor: St.Widget;
 	container: St.Widget;
+	originalVisible?: boolean;
 }
