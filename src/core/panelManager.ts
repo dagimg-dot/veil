@@ -1,4 +1,4 @@
-import type Clutter from "gi://Clutter";
+import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import type St from "gi://St";
@@ -19,7 +19,9 @@ export class PanelManager {
 	private initialSetupComplete = false;
 	private hoverHideTimerId: number | null = null;
 	private onHoverCompleteCallback?: () => void;
+	private onPanelLeaveCallback?: () => void;
 	private items: PanelItem[] = [];
+	private hoverState: "none" | "indicator" | "panel" = "none";
 	// Watch for late accessible_name changes
 	private nameChangeHandlers: Map<St.Widget, number> = new Map();
 	private firstChildHandlers: Map<St.Widget, number> = new Map();
@@ -35,6 +37,7 @@ export class PanelManager {
 		this.animationManager = new AnimationManager(settings);
 		this.setupListeners();
 		this.updateAllItemsList();
+		this.attachHoverHandlersToExistingItems();
 	}
 
 	private setupListeners() {
@@ -49,6 +52,34 @@ export class PanelManager {
 		);
 
 		logger.debug("Panel listeners setup complete");
+	}
+
+	private attachHoverHandlersToExistingItems() {
+		print("[Veil] attachHoverHandlersToExistingItems called");
+		const items = MainPanel._rightBox.get_children() as St.Widget[];
+		print(`[Veil] Found ${items.length} children in rightBox`);
+		items.forEach((actor) => {
+			const child = actor.firstChild;
+			if (!child) return;
+			if (child === MainPanel.statusArea.quickSettings) return;
+			if (child === this.veilIndicator) return;
+			this.attachHoverHandlers(actor, child);
+		});
+		print("[Veil] Attached hover handlers to existing panel items");
+	}
+
+	private attachHoverHandlers(_actor: St.Widget, child: Clutter.Actor) {
+		child.connect("enter-event", () => {
+			this.setHoverState("panel");
+			print("[Veil] Panel item enter");
+			return Clutter.EVENT_PROPAGATE;
+		});
+		child.connect("leave-event", () => {
+			this.setHoverState("none");
+			print("[Veil] Panel item leave");
+			this.onPanelLeaveCallback?.();
+			return Clutter.EVENT_PROPAGATE;
+		});
 	}
 
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
@@ -94,6 +125,8 @@ export class PanelManager {
 		) {
 			return;
 		}
+
+		this.attachHoverHandlers(actor, child);
 
 		const itemName = this.getItemName(child as St.Widget);
 		if (itemName) {
@@ -383,6 +416,16 @@ export class PanelManager {
 		this.onHoverCompleteCallback = callback;
 	}
 
+	setOnPanelLeave(callback: () => void) {
+		this.onPanelLeaveCallback = callback;
+	}
+
+	setHoverState(state: "none" | "indicator" | "panel") {
+		this.hoverState = state;
+		print(`[Veil] setHoverState=${state}`);
+		logger.debug("Hover state changed", { hoverState: this.hoverState });
+	}
+
 	temporarilyShowItems() {
 		// Cancel any pending hide timer
 		this.cancelHoverHideTimer();
@@ -425,30 +468,35 @@ export class PanelManager {
 	}
 
 	temporarilyHideItemsWithDelay() {
-		// Check if hide on leave is enabled
+		print(
+			`[Veil] temporarilyHideItemsWithDelay called, hoverState=${this.hoverState}`,
+		);
+
+		if (this.hoverState !== "none") {
+			print("[Veil] Still hovering, skipping hide");
+			return;
+		}
+
 		const hideOnLeave = this.settings.get_boolean("hover-hide-on-leave");
 
 		if (hideOnLeave) {
-			// Hide immediately
 			this.restoreVisibilityToSavedState();
-			// Notify that hover is complete (to restore icon)
 			this.onHoverCompleteCallback?.();
 			logger.debug("Hide on leave: items hidden immediately");
 		} else {
-			// Cancel any existing timer
 			this.cancelHoverHideTimer();
 
-			// Get hover duration from settings (in seconds)
 			const hoverDuration = this.settings.get_int("hover-duration");
 
-			// Start a timer with configured duration before hiding
 			this.hoverHideTimerId = GLib.timeout_add_seconds(
 				GLib.PRIORITY_DEFAULT,
 				hoverDuration,
 				() => {
 					this.hoverHideTimerId = null;
+					if (this.hoverState !== "none") {
+						return GLib.SOURCE_REMOVE;
+					}
 					this.restoreVisibilityToSavedState();
-					// Notify that hover is complete (to restore icon)
 					this.onHoverCompleteCallback?.();
 					return GLib.SOURCE_REMOVE;
 				},

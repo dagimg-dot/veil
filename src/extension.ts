@@ -1,4 +1,5 @@
 import type Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { VeilIndicator } from "./components/indicator.js";
@@ -50,9 +51,15 @@ export default class Veil extends Extension {
 
 		this.indicator.setOnHoverEnter(() => {
 			this.handleHoverEnter();
+			this.panelManager?.setHoverState("indicator");
 		});
 
 		this.indicator.setOnHoverLeave(() => {
+			this.panelManager?.setHoverState("none");
+			this.handleHoverLeave();
+		});
+
+		this.panelManager.setOnPanelLeave(() => {
 			this.handleHoverLeave();
 		});
 
@@ -143,7 +150,10 @@ export default class Veil extends Extension {
 			return;
 		}
 
-		this.panelManager.temporarilyHideItemsWithDelay();
+		GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+			this.panelManager?.temporarilyHideItemsWithDelay();
+			return GLib.SOURCE_REMOVE;
+		});
 		logger.debug("Hover leave: scheduling hide with delay");
 	}
 
