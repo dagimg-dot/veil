@@ -14,3 +14,4 @@ result
 .DS_Store
 .vscode
 scripts/dev-*.sh
+.env
