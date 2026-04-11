@@ -22,6 +22,7 @@ export class PanelManager {
 	private onPanelLeaveCallback?: () => void;
 	private items: PanelItem[] = [];
 	private hoverState: "none" | "indicator" | "panel" = "none";
+	private isClicking = false;
 	// Watch for late accessible_name changes
 	private nameChangeHandlers: Map<St.Widget, number> = new Map();
 	private firstChildHandlers: Map<St.Widget, number> = new Map();
@@ -76,8 +77,24 @@ export class PanelManager {
 		});
 		child.connect("leave-event", () => {
 			this.setHoverState("none");
+			this.isClicking = false;
 			print("[Veil] Panel item leave");
 			this.onPanelLeaveCallback?.();
+			return Clutter.EVENT_PROPAGATE;
+		});
+		child.connect("button-press-event", () => {
+			this.isClicking = true;
+			print("[Veil] Panel item click started");
+			GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+				this.isClicking = false;
+				print("[Veil] Auto-reset click state after timeout");
+				return GLib.SOURCE_REMOVE;
+			});
+			return Clutter.EVENT_PROPAGATE;
+		});
+		child.connect("button-release-event", () => {
+			this.isClicking = false;
+			print("[Veil] Panel item click ended");
 			return Clutter.EVENT_PROPAGATE;
 		});
 	}
@@ -469,11 +486,16 @@ export class PanelManager {
 
 	temporarilyHideItemsWithDelay() {
 		print(
-			`[Veil] temporarilyHideItemsWithDelay called, hoverState=${this.hoverState}`,
+			`[Veil] temporarilyHideItemsWithDelay called, hoverState=${this.hoverState}, isClicking=${this.isClicking}`,
 		);
 
 		if (this.hoverState !== "none") {
 			print("[Veil] Still hovering, skipping hide");
+			return;
+		}
+
+		if (this.isClicking) {
+			print("[Veil] Currently clicking, skipping hide");
 			return;
 		}
 
@@ -493,7 +515,7 @@ export class PanelManager {
 				hoverDuration,
 				() => {
 					this.hoverHideTimerId = null;
-					if (this.hoverState !== "none") {
+					if (this.hoverState !== "none" || this.isClicking) {
 						return GLib.SOURCE_REMOVE;
 					}
 					this.restoreVisibilityToSavedState();
