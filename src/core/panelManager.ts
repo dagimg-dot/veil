@@ -93,10 +93,16 @@ export class PanelManager {
 
 	private attachHoverHandlers(_actor: St.Widget, child: Clutter.Actor) {
 		child.connect("enter-event", () => {
+			if (this.settings.get_string("interaction-mode") !== "hover") {
+				return Clutter.EVENT_PROPAGATE;
+			}
 			this.setHoverInteractionZone("panel");
 			return Clutter.EVENT_PROPAGATE;
 		});
 		child.connect("leave-event", () => {
+			if (this.settings.get_string("interaction-mode") !== "hover") {
+				return Clutter.EVENT_PROPAGATE;
+			}
 			const shellMenu =
 				child instanceof PanelMenu.Button
 					? (child.menu as ShellPopupMenu | null)
@@ -558,6 +564,9 @@ export class PanelManager {
 	}
 
 	scheduleTemporaryHide() {
+		if (this.settings.get_string("interaction-mode") !== "hover") {
+			return;
+		}
 		if (this.hoverInteractionZone !== "none") {
 			return;
 		}
