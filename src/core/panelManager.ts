@@ -1,8 +1,10 @@
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
-import type St from "gi://St";
-import type * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
+import St from "gi://St";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
+import type { PopupMenu as ShellPopupMenu } from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { MainPanel, type PanelItem } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { AnimationManager } from "./animationManager.js";
@@ -22,7 +24,10 @@ export class PanelManager {
 	private onPanelLeaveCallback?: () => void;
 	private items: PanelItem[] = [];
 	private hoverState: "none" | "indicator" | "panel" = "none";
-	private isClicking = false;
+	/** True between button-press and release on a right-box item (avoids spurious leave on click). */
+	private pointerDownOnPanelItem = false;
+	/** `open-state-changed` on each tray `PanelMenu.Button.menu`, keyed by the button actor */
+	private menuOpenStateHandlers: Map<Clutter.Actor, number> = new Map();
 	// Watch for late accessible_name changes
 	private nameChangeHandlers: Map<St.Widget, number> = new Map();
 	private firstChildHandlers: Map<St.Widget, number> = new Map();
@@ -56,9 +61,7 @@ export class PanelManager {
 	}
 
 	private attachHoverHandlersToExistingItems() {
-		print("[Veil] attachHoverHandlersToExistingItems called");
 		const items = MainPanel._rightBox.get_children() as St.Widget[];
-		print(`[Veil] Found ${items.length} children in rightBox`);
 		items.forEach((actor) => {
 			const child = actor.firstChild;
 			if (!child) return;
@@ -66,37 +69,100 @@ export class PanelManager {
 			if (child === this.veilIndicator) return;
 			this.attachHoverHandlers(actor, child);
 		});
-		print("[Veil] Attached hover handlers to existing panel items");
 	}
 
 	private attachHoverHandlers(_actor: St.Widget, child: Clutter.Actor) {
 		child.connect("enter-event", () => {
 			this.setHoverState("panel");
-			print("[Veil] Panel item enter");
 			return Clutter.EVENT_PROPAGATE;
 		});
 		child.connect("leave-event", () => {
+			const shellMenu =
+				child instanceof PanelMenu.Button
+					? (child.menu as ShellPopupMenu | null)
+					: null;
+			if (shellMenu?.isOpen) {
+				return Clutter.EVENT_PROPAGATE;
+			}
+			if (this.pointerDownOnPanelItem) {
+				return Clutter.EVENT_PROPAGATE;
+			}
 			this.setHoverState("none");
-			this.isClicking = false;
-			print("[Veil] Panel item leave");
 			this.onPanelLeaveCallback?.();
 			return Clutter.EVENT_PROPAGATE;
 		});
 		child.connect("button-press-event", () => {
-			this.isClicking = true;
-			print("[Veil] Panel item click started");
-			GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-				this.isClicking = false;
-				print("[Veil] Auto-reset click state after timeout");
-				return GLib.SOURCE_REMOVE;
-			});
+			this.pointerDownOnPanelItem = true;
 			return Clutter.EVENT_PROPAGATE;
 		});
 		child.connect("button-release-event", () => {
-			this.isClicking = false;
-			print("[Veil] Panel item click ended");
+			this.pointerDownOnPanelItem = false;
 			return Clutter.EVENT_PROPAGATE;
 		});
+		this.attachMenuOpenStateHandlerIfNeeded(child);
+	}
+
+	/**
+	 * Resets the press guard used to ignore spurious `leave-event` during a click.
+	 *
+	 * Dismissing a tray menu with an outside click often never delivers
+	 * `button-release-event` to the applet. Without this reset, the guard stays
+	 * set and later real leaves are ignored, so hover hide never runs.
+	 */
+	private clearPointerDownHoverGuard() {
+		if (!this.pointerDownOnPanelItem) return;
+		this.pointerDownOnPanelItem = false;
+	}
+
+	private attachMenuOpenStateHandlerIfNeeded(child: Clutter.Actor) {
+		if (this.menuOpenStateHandlers.has(child)) return;
+		if (!(child instanceof PanelMenu.Button)) return;
+
+		const menu = child.menu as ShellPopupMenu;
+		if (!menu) return;
+
+		const handlerId = menu.connect("open-state-changed", () => {
+			// isOpen is updated before emit; avoids relying on callback arity.
+			if (menu.isOpen) {
+				this.clearPointerDownHoverGuard();
+				return undefined;
+			}
+			this.clearPointerDownHoverGuard();
+			GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+				this.syncHoverAfterPanelMenuClose();
+				return GLib.SOURCE_REMOVE;
+			});
+			return undefined;
+		});
+		this.menuOpenStateHandlers.set(child, handlerId);
+	}
+
+	/** Cursor still over the top panel or a Shell popup (e.g. tray menu under uiGroup). */
+	pointerInHoverSafeZone(): boolean {
+		const [x, y] = global.get_pointer();
+		let actor: Clutter.Actor | null = global.stage.get_actor_at_pos(
+			Clutter.PickMode.REACTIVE,
+			x,
+			y,
+		);
+
+		while (actor) {
+			if (actor === Main.panel) return true;
+			if (actor instanceof St.Widget) {
+				const cls = actor.get_style_class_name() ?? "";
+				if (cls.split(/\s+/).includes("popup-menu")) return true;
+			}
+			actor = actor.get_parent();
+		}
+		return false;
+	}
+
+	private syncHoverAfterPanelMenuClose() {
+		if (this.settings.get_string("interaction-mode") !== "hover") return;
+		if (this.pointerInHoverSafeZone()) return;
+
+		this.setHoverState("none");
+		this.onPanelLeaveCallback?.();
 	}
 
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
@@ -188,6 +254,13 @@ export class PanelManager {
 			if (nameHandler !== undefined) {
 				(child as St.Widget).disconnect(nameHandler);
 				this.nameChangeHandlers.delete(child as St.Widget);
+			}
+
+			const menuHandlerId = this.menuOpenStateHandlers.get(child);
+			if (menuHandlerId !== undefined) {
+				const button = child as PanelMenu.Button;
+				if (button.menu) button.menu.disconnect(menuHandlerId);
+				this.menuOpenStateHandlers.delete(child);
 			}
 		}
 
@@ -439,7 +512,6 @@ export class PanelManager {
 
 	setHoverState(state: "none" | "indicator" | "panel") {
 		this.hoverState = state;
-		print(`[Veil] setHoverState=${state}`);
 		logger.debug("Hover state changed", { hoverState: this.hoverState });
 	}
 
@@ -447,55 +519,37 @@ export class PanelManager {
 		// Cancel any pending hide timer
 		this.cancelHoverHideTimer();
 
-		// Show all items without changing the saved state
+		// Match setVisibility(true) rules: respect originalVisible and visible-items
 		const panelItems = this.getAllPanelItems();
 		const animationEnabled = this.settings.get_boolean("animation-enabled");
 
 		if (animationEnabled) {
-			// Only animate items that are not visible at all
-			const itemsToAnimate = panelItems.filter(
+			const itemsNeedingReveal = panelItems.filter(
 				(item) => !item.container.visible,
 			);
+			this.fadeInItems(itemsNeedingReveal);
 
-			itemsToAnimate.forEach((item) => {
-				this.animationManager.fadeIn(item.container);
-			});
-
-			// Ensure all items are in the correct visible state
 			const itemsToFix = panelItems.filter(
-				(item) => item.container.visible && item.container.opacity < 255,
+				(item) =>
+					item.originalVisible !== false &&
+					item.container.visible &&
+					item.container.opacity < 255,
 			);
-
 			itemsToFix.forEach((item) => {
 				item.container.opacity = 255;
 			});
 		} else {
-			// Instantly show all items
+			this.showItemsInstantly(panelItems);
 			panelItems.forEach((item) => {
-				item.container.visible = true;
-				item.container.opacity = 255;
-				item.container.set_translation(0, 0, 0);
+				if (item.container.visible) {
+					item.container.set_translation(0, 0, 0);
+				}
 			});
 		}
-
-		logger.debug("Temporarily showing all items (hover)", {
-			count: panelItems.length,
-			animated: animationEnabled,
-		});
 	}
 
 	temporarilyHideItemsWithDelay() {
-		print(
-			`[Veil] temporarilyHideItemsWithDelay called, hoverState=${this.hoverState}, isClicking=${this.isClicking}`,
-		);
-
 		if (this.hoverState !== "none") {
-			print("[Veil] Still hovering, skipping hide");
-			return;
-		}
-
-		if (this.isClicking) {
-			print("[Veil] Currently clicking, skipping hide");
 			return;
 		}
 
@@ -504,7 +558,6 @@ export class PanelManager {
 		if (hideOnLeave) {
 			this.restoreVisibilityToSavedState();
 			this.onHoverCompleteCallback?.();
-			logger.debug("Hide on leave: items hidden immediately");
 		} else {
 			this.cancelHoverHideTimer();
 
@@ -515,7 +568,7 @@ export class PanelManager {
 				hoverDuration,
 				() => {
 					this.hoverHideTimerId = null;
-					if (this.hoverState !== "none" || this.isClicking) {
+					if (this.hoverState !== "none") {
 						return GLib.SOURCE_REMOVE;
 					}
 					this.restoreVisibilityToSavedState();
@@ -523,8 +576,6 @@ export class PanelManager {
 					return GLib.SOURCE_REMOVE;
 				},
 			);
-
-			logger.debug("Scheduled hover hide", { duration: hoverDuration });
 		}
 	}
 
@@ -532,7 +583,6 @@ export class PanelManager {
 		if (this.hoverHideTimerId !== null) {
 			GLib.Source.remove(this.hoverHideTimerId);
 			this.hoverHideTimerId = null;
-			logger.debug("Cancelled hover hide timer");
 		}
 	}
 
@@ -569,6 +619,12 @@ export class PanelManager {
 	destroy() {
 		this.cancelHoverHideTimer();
 		this.animationManager.destroy();
+
+		for (const [child, handlerId] of this.menuOpenStateHandlers) {
+			const button = child as PanelMenu.Button;
+			if (button.menu) button.menu.disconnect(handlerId);
+		}
+		this.menuOpenStateHandlers.clear();
 
 		if (this.addedHandlerId !== null) {
 			MainPanel._rightBox.disconnect(this.addedHandlerId);

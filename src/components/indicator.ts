@@ -166,7 +166,6 @@ export class VeilIndicator {
 
 			// Only handle hover in Hover mode
 			if (interactionMode === "hover") {
-				logger.debug("Hover enter on Veil indicator");
 				this.isHovering = true;
 				// Change icon to visible state during hover
 				this.updateIcon(true);
@@ -180,7 +179,6 @@ export class VeilIndicator {
 
 			// Only handle hover in Hover mode
 			if (interactionMode === "hover") {
-				logger.debug("Hover leave on Veil indicator");
 				this.isHovering = false;
 				this.onHoverLeaveCallback?.();
 			}
@@ -200,11 +198,17 @@ export class VeilIndicator {
 		this.onHoverLeaveCallback = callback;
 	}
 
+	/** When a Shell menu closes without a matching leave-event (hover mode). */
+	notifyHoverLeaveSyncFromMenu() {
+		if (this.settings.get_string("interaction-mode") !== "hover") return;
+		this.isHovering = false;
+		this.onHoverLeaveCallback?.();
+	}
+
 	restoreIconAfterHover() {
 		// Restore icon to hidden state after hover ends
 		if (!this.isHovering) {
 			this.updateIcon(false);
-			logger.debug("Icon restored to hidden state after hover");
 		}
 	}
 

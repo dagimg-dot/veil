@@ -2,6 +2,7 @@ import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import type { PopupMenu as ShellPopupMenu } from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { VeilIndicator } from "./components/indicator.js";
 import { PanelManager } from "./core/panelManager.js";
 import { StateManager } from "./core/stateManager.js";
@@ -66,6 +67,25 @@ export default class Veil extends Extension {
 		this.panelManager.setOnHoverComplete(() => {
 			this.handleHoverComplete();
 		});
+
+		const veilButton = this.indicator.getButton();
+		const veilMenu = veilButton.menu as ShellPopupMenu | null;
+		if (veilMenu) {
+			veilMenu.connect("open-state-changed", () => {
+				if (veilMenu.isOpen) return undefined;
+				GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+					if (this.settings?.get_string("interaction-mode") !== "hover") {
+						return GLib.SOURCE_REMOVE;
+					}
+					const inside = this.panelManager?.pointerInHoverSafeZone() ?? false;
+					if (!inside) {
+						this.indicator?.notifyHoverLeaveSyncFromMenu();
+					}
+					return GLib.SOURCE_REMOVE;
+				});
+				return undefined;
+			});
+		}
 
 		this.stateManager.setOnVisibilityChanged((visible) => {
 			this.panelManager?.setVisibility(visible);
@@ -141,7 +161,6 @@ export default class Veil extends Extension {
 		}
 
 		this.panelManager.temporarilyShowItems();
-		logger.debug("Hover enter: temporarily showing items");
 	}
 
 	private handleHoverLeave() {
@@ -154,7 +173,6 @@ export default class Veil extends Extension {
 			this.panelManager?.temporarilyHideItemsWithDelay();
 			return GLib.SOURCE_REMOVE;
 		});
-		logger.debug("Hover leave: scheduling hide with delay");
 	}
 
 	private handleHoverComplete() {
@@ -165,7 +183,6 @@ export default class Veil extends Extension {
 
 		// Restore icon to hidden state after hover completes
 		this.indicator.restoreIconAfterHover();
-		logger.debug("Hover complete: icon restored");
 	}
 
 	disable() {
