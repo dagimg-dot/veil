@@ -143,6 +143,23 @@ export default class Veil extends Extension {
 				logger.debug("Auto-hide duration setting changed");
 			}),
 		);
+		this.settingsHandlers.push(
+			this.settings.connect("changed::interaction-mode", () => {
+				if (this.settings?.get_string("interaction-mode") !== "hover") {
+					return;
+				}
+				this.panelManager?.resetHoverStateForModeEntry();
+				// Click-expanded tray has the same look as hover preview; leave would
+				// "restore" to revealed=true and nothing would hide. Collapse so hover
+				// teardown matches a real baseline.
+				if (this.stateManager?.isPanelRevealed()) {
+					this.stateManager.setPanelRevealed(false);
+					logger.debug(
+						"Switched to hover mode while expanded: collapsed for hover baseline",
+					);
+				}
+			}),
+		);
 	}
 
 	private handleToggle() {

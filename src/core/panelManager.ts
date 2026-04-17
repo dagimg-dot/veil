@@ -508,6 +508,16 @@ export class PanelManager {
 		this.onPanelLeaveCallback = callback;
 	}
 
+	/**
+	 * Call when switching to hover interaction mode. Tray handlers update the hover
+	 * zone even in click mode, so stale `panel` can block `scheduleTemporaryHide`;
+	 * pending hover timers from a previous session should not run after the switch.
+	 */
+	resetHoverStateForModeEntry() {
+		this.cancelHoverHideTimer();
+		this.setHoverInteractionZone("none");
+	}
+
 	setHoverInteractionZone(zone: HoverInteractionZone) {
 		this.hoverInteractionZone = zone;
 		logger.debug("Hover interaction zone changed", {
