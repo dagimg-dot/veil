@@ -40,3 +40,15 @@ It is a modern successor to <a href="https://github.com/fablevi/HideItems">Hide 
 ## Development
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for development instructions.
+
+## Panel items in the screenshot
+
+Panel icons shown in the preview come from these extensions:
+
+- [Activity Watch](https://activitywatch.net)
+- [Net Speed Simplified](https://extensions.gnome.org/extension/3724/net-speed-simplified/)
+- [Astra Monitor](https://extensions.gnome.org/extension/6682/astra-monitor/)
+- [Pop Shell](https://github.com/pop-os/shell)
+- [Power Indicator](https://extensions.gnome.org/extension/1501/power-indicator/)
+- [Easy Effects Preset Switcher](https://github.com/wwmm/easyeffects)
+
