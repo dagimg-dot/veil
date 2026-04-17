@@ -2,21 +2,27 @@ import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { logger } from "../utils/logger.js";
 
+/**
+ * Canonical "panel revealed" state: whether Veil is showing the expanded tray
+ * (vs collapsed). Persists via GSettings when save-state is enabled.
+ * Keys in the schema remain *-visibility for compatibility.
+ */
 export class StateManager {
 	private settings: Gio.Settings;
-	private currentVisibility: boolean;
-	private onVisibilityChangedCallback?: (visible: boolean) => void;
+	/** When true, the tray is expanded per user/saved preference (click mode, or baseline for hover). */
+	private panelRevealed: boolean;
+	private onPanelRevealChangedCallback?: (revealed: boolean) => void;
 	private autoHideTimerId: number | null = null;
 
 	constructor(settings: Gio.Settings) {
 		this.settings = settings;
-		this.currentVisibility = this.getInitialVisibility();
+		this.panelRevealed = this.getInitialPanelRevealed();
 		logger.debug("StateManager initialized", {
-			currentVisibility: this.currentVisibility,
+			panelRevealed: this.panelRevealed,
 		});
 	}
 
-	private getInitialVisibility(): boolean {
+	private getInitialPanelRevealed(): boolean {
 		const saveState = this.settings.get_boolean("save-state");
 		if (saveState) {
 			return this.settings.get_boolean("saved-visibility");
@@ -24,37 +30,35 @@ export class StateManager {
 		return this.settings.get_boolean("default-visibility");
 	}
 
-	getVisibility(): boolean {
-		return this.currentVisibility;
+	isPanelRevealed(): boolean {
+		return this.panelRevealed;
 	}
 
-	toggleVisibility(): boolean {
-		this.currentVisibility = !this.currentVisibility;
-		this.saveVisibility();
+	togglePanelReveal(): boolean {
+		this.panelRevealed = !this.panelRevealed;
+		this.savePanelRevealToSettings();
 		this.handleAutoHideTimer();
-		this.onVisibilityChangedCallback?.(this.currentVisibility);
-		logger.debug("Visibility toggled", {
-			newVisibility: this.currentVisibility,
+		this.onPanelRevealChangedCallback?.(this.panelRevealed);
+		logger.debug("Panel reveal toggled", {
+			panelRevealed: this.panelRevealed,
 		});
-		return this.currentVisibility;
+		return this.panelRevealed;
 	}
 
-	setVisibility(visible: boolean) {
-		if (this.currentVisibility !== visible) {
-			this.currentVisibility = visible;
-			this.saveVisibility();
+	setPanelRevealed(revealed: boolean) {
+		if (this.panelRevealed !== revealed) {
+			this.panelRevealed = revealed;
+			this.savePanelRevealToSettings();
 			this.handleAutoHideTimer();
-			this.onVisibilityChangedCallback?.(this.currentVisibility);
-			logger.debug("Visibility set", { visible });
+			this.onPanelRevealChangedCallback?.(this.panelRevealed);
+			logger.debug("Panel reveal set", { revealed });
 		}
 	}
 
 	private handleAutoHideTimer() {
-		// Cancel existing timer if any
 		this.cancelAutoHideTimer();
 
-		// Start timer only when items are shown and auto-hide is enabledb
-		if (this.currentVisibility) {
+		if (this.panelRevealed) {
 			const autoHideEnabled = this.settings.get_boolean("auto-hide-enabled");
 			if (autoHideEnabled) {
 				this.startAutoHideTimer();
@@ -71,9 +75,9 @@ export class StateManager {
 			GLib.PRIORITY_DEFAULT,
 			duration,
 			() => {
-				logger.debug("Auto-hide timer expired, hiding items");
+				logger.debug("Auto-hide timer expired, collapsing tray");
 				this.autoHideTimerId = null;
-				this.setVisibility(false);
+				this.setPanelRevealed(false);
 				return GLib.SOURCE_REMOVE;
 			},
 		);
@@ -91,17 +95,17 @@ export class StateManager {
 		this.cancelAutoHideTimer();
 	}
 
-	private saveVisibility() {
+	private savePanelRevealToSettings() {
 		const saveState = this.settings.get_boolean("save-state");
 		if (saveState) {
-			this.settings.set_boolean("saved-visibility", this.currentVisibility);
+			this.settings.set_boolean("saved-visibility", this.panelRevealed);
 
-			logger.debug("Visibility state saved", {
-				visibility: this.currentVisibility,
+			logger.debug("Panel reveal saved to settings", {
+				panelRevealed: this.panelRevealed,
 			});
 		} else {
 			this.settings.reset("saved-visibility");
-			logger.debug("Visibility state reset to default");
+			logger.debug("Saved visibility key reset (save-state off)");
 		}
 	}
 
@@ -161,28 +165,28 @@ export class StateManager {
 		return cleaned.length !== visibleItems.length;
 	}
 
-	setOnVisibilityChanged(callback: (visible: boolean) => void) {
-		this.onVisibilityChangedCallback = callback;
+	setOnPanelRevealChanged(callback: (revealed: boolean) => void) {
+		this.onPanelRevealChangedCallback = callback;
 	}
 
 	onSaveStateChanged() {
 		const saveState = this.settings.get_boolean("save-state");
 		if (!saveState) {
-			const defaultVisibility = this.settings.get_boolean("default-visibility");
-			this.setVisibility(defaultVisibility);
+			const defaultRevealed = this.settings.get_boolean("default-visibility");
+			this.setPanelRevealed(defaultRevealed);
 		}
 	}
 
 	onDefaultVisibilityChanged() {
 		const saveState = this.settings.get_boolean("save-state");
 		if (!saveState) {
-			const defaultVisibility = this.settings.get_boolean("default-visibility");
-			this.setVisibility(defaultVisibility);
+			const defaultRevealed = this.settings.get_boolean("default-visibility");
+			this.setPanelRevealed(defaultRevealed);
 		}
 	}
 
 	onVisibleItemsChanged() {
 		logger.debug("Visible items changed");
-		this.onVisibilityChangedCallback?.(this.currentVisibility);
+		this.onPanelRevealChangedCallback?.(this.panelRevealed);
 	}
 }

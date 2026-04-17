@@ -1,3 +1,15 @@
+/**
+ * Panel tray UI: tracks right-box items, animations, and hover interaction.
+ *
+ * Invariants:
+ * - **Permanent visibility** (`setPermanentVisibility`) reflects `StateManager` /
+ *   GSettings: the user’s collapsed vs expanded tray preference. It may write
+ *   through to `StateManager` only indirectly via extension flows; this layer
+ *   applies Clutter visibility to match that state.
+ * - **Temporary visibility** (`setTemporaryVisibility` / `scheduleTemporaryHide`)
+ *   is hover-only preview: it never updates `StateManager`; teardown restores
+ *   via `restoreVisibilityToSavedState` → `setPermanentVisibility(isPanelRevealed())`.
+ */
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
@@ -8,7 +20,15 @@ import type { PopupMenu as ShellPopupMenu } from "resource:///org/gnome/shell/ui
 import { MainPanel, type PanelItem } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { AnimationManager } from "./animationManager.js";
+import { shouldOfferRevealForItem } from "./panelRevealRules.js";
 import type { StateManager } from "./stateManager.js";
+
+/**
+ * Pointer hover region (interaction-mode hover only).
+ * Valid transitions include: none ↔ indicator (Veil), none/indicator ↔ panel
+ * (tray items); menu-close sync and leave handlers may set none.
+ */
+export type HoverInteractionZone = "none" | "indicator" | "panel";
 
 export class PanelManager {
 	private settings: Gio.Settings;
@@ -23,7 +43,7 @@ export class PanelManager {
 	private onHoverCompleteCallback?: () => void;
 	private onPanelLeaveCallback?: () => void;
 	private items: PanelItem[] = [];
-	private hoverState: "none" | "indicator" | "panel" = "none";
+	private hoverInteractionZone: HoverInteractionZone = "none";
 	/** True between button-press and release on a right-box item (avoids spurious leave on click). */
 	private pointerDownOnPanelItem = false;
 	/** `open-state-changed` on each tray `PanelMenu.Button.menu`, keyed by the button actor */
@@ -73,7 +93,7 @@ export class PanelManager {
 
 	private attachHoverHandlers(_actor: St.Widget, child: Clutter.Actor) {
 		child.connect("enter-event", () => {
-			this.setHoverState("panel");
+			this.setHoverInteractionZone("panel");
 			return Clutter.EVENT_PROPAGATE;
 		});
 		child.connect("leave-event", () => {
@@ -87,7 +107,7 @@ export class PanelManager {
 			if (this.pointerDownOnPanelItem) {
 				return Clutter.EVENT_PROPAGATE;
 			}
-			this.setHoverState("none");
+			this.setHoverInteractionZone("none");
 			this.onPanelLeaveCallback?.();
 			return Clutter.EVENT_PROPAGATE;
 		});
@@ -161,7 +181,7 @@ export class PanelManager {
 		if (this.settings.get_string("interaction-mode") !== "hover") return;
 		if (this.pointerInHoverSafeZone()) return;
 
-		this.setHoverState("none");
+		this.setHoverInteractionZone("none");
 		this.onPanelLeaveCallback?.();
 	}
 
@@ -361,7 +381,7 @@ export class PanelManager {
 		return visibleItems.includes(item.name);
 	}
 
-	setVisibility(visible: boolean) {
+	setPermanentVisibility(revealed: boolean) {
 		this.initialSetupComplete = true;
 
 		const panelItems = this.getAllPanelItems();
@@ -378,7 +398,7 @@ export class PanelManager {
 			? panelItems.filter((item) => visibleItems.includes(item.name))
 			: [];
 
-		if (visible) {
+		if (revealed) {
 			// Showing: animate affected items
 			if (animationEnabled) {
 				this.fadeInItems(itemsToAnimate);
@@ -401,8 +421,8 @@ export class PanelManager {
 			}
 		}
 
-		logger.debug("Set panel visibility", {
-			visible,
+		logger.debug("Set permanent panel visibility", {
+			revealed,
 			totalItems: panelItems.length,
 			visibleItemsCount: visibleItems.length,
 			animated: animationEnabled,
@@ -413,22 +433,11 @@ export class PanelManager {
 		const visibleItems = this.settings.get_strv("visible-items");
 
 		items.forEach((item) => {
-			// If initially hidden (e.g. by Search Light), respect that
-			if (item.originalVisible === false) {
-				logger.debug("Skipping show - item was hidden at detection", {
-					itemName: item.name,
-				});
+			if (!shouldOfferRevealForItem(item, visibleItems)) {
 				return;
 			}
-
-			// If it was visible at detection (or undefined), show by default
-			const userWantsVisible = visibleItems.includes(item.name);
-			const wasVisible =
-				item.originalVisible === true || item.originalVisible === undefined;
-			if (userWantsVisible || wasVisible) {
-				item.container.visible = true;
-				item.container.opacity = 255;
-			}
+			item.container.visible = true;
+			item.container.opacity = 255;
 		});
 	}
 
@@ -442,21 +451,10 @@ export class PanelManager {
 		const visibleItems = this.settings.get_strv("visible-items");
 
 		items.forEach((item) => {
-			// If initially hidden (e.g. by Search Light), respect that
-			if (item.originalVisible === false) {
-				logger.debug("Skipping fade - item was hidden at detection", {
-					itemName: item.name,
-				});
+			if (!shouldOfferRevealForItem(item, visibleItems)) {
 				return;
 			}
-
-			// If it was visible at detection (or undefined), show by default
-			const userWantsVisible = visibleItems.includes(item.name);
-			const wasVisible =
-				item.originalVisible === true || item.originalVisible === undefined;
-			if (userWantsVisible || wasVisible) {
-				this.animationManager.fadeIn(item.container);
-			}
+			this.animationManager.fadeIn(item.container);
 		});
 	}
 
@@ -510,16 +508,17 @@ export class PanelManager {
 		this.onPanelLeaveCallback = callback;
 	}
 
-	setHoverState(state: "none" | "indicator" | "panel") {
-		this.hoverState = state;
-		logger.debug("Hover state changed", { hoverState: this.hoverState });
+	setHoverInteractionZone(zone: HoverInteractionZone) {
+		this.hoverInteractionZone = zone;
+		logger.debug("Hover interaction zone changed", {
+			zone: this.hoverInteractionZone,
+		});
 	}
 
-	temporarilyShowItems() {
+	setTemporaryVisibility() {
 		// Cancel any pending hide timer
 		this.cancelHoverHideTimer();
 
-		// Match setVisibility(true) rules: respect originalVisible and visible-items
 		const panelItems = this.getAllPanelItems();
 		const animationEnabled = this.settings.get_boolean("animation-enabled");
 
@@ -548,8 +547,8 @@ export class PanelManager {
 		}
 	}
 
-	temporarilyHideItemsWithDelay() {
-		if (this.hoverState !== "none") {
+	scheduleTemporaryHide() {
+		if (this.hoverInteractionZone !== "none") {
 			return;
 		}
 
@@ -568,7 +567,7 @@ export class PanelManager {
 				hoverDuration,
 				() => {
 					this.hoverHideTimerId = null;
-					if (this.hoverState !== "none") {
+					if (this.hoverInteractionZone !== "none") {
 						return GLib.SOURCE_REMOVE;
 					}
 					this.restoreVisibilityToSavedState();
@@ -587,23 +586,22 @@ export class PanelManager {
 	}
 
 	private restoreVisibilityToSavedState() {
-		// Restore to the actual saved visibility state
-		const currentVisibility = this.stateManager.getVisibility();
-		this.setVisibility(currentVisibility);
+		const revealed = this.stateManager.isPanelRevealed();
+		this.setPermanentVisibility(revealed);
 		logger.debug("Restored visibility to saved state", {
-			visible: currentVisibility,
+			revealed,
 		});
 	}
 
 	private handleNewItemVisibility(itemName: string, container: St.Widget) {
-		const currentVisibility = this.stateManager.getVisibility();
+		const panelRevealed = this.stateManager.isPanelRevealed();
 		const visibleItems = this.settings.get_strv("visible-items");
 
-		if (currentVisibility) {
+		if (panelRevealed) {
 			// Overall visibility is true (all items shown): show the new item
 			container.visible = true;
 			container.opacity = 255;
-			logger.debug("New item shown (visibility=true)", { itemName });
+			logger.debug("New item shown (panel revealed)", { itemName });
 		} else {
 			// Overall visibility is false (items hidden): show only if in visible-items list
 			const shouldBeVisible = visibleItems.includes(itemName);

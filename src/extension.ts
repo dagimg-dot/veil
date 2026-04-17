@@ -52,11 +52,11 @@ export default class Veil extends Extension {
 
 		this.indicator.setOnHoverEnter(() => {
 			this.handleHoverEnter();
-			this.panelManager?.setHoverState("indicator");
+			this.panelManager?.setHoverInteractionZone("indicator");
 		});
 
 		this.indicator.setOnHoverLeave(() => {
-			this.panelManager?.setHoverState("none");
+			this.panelManager?.setHoverInteractionZone("none");
 			this.handleHoverLeave();
 		});
 
@@ -87,9 +87,9 @@ export default class Veil extends Extension {
 			});
 		}
 
-		this.stateManager.setOnVisibilityChanged((visible) => {
-			this.panelManager?.setVisibility(visible);
-			this.indicator?.updateIcon(visible);
+		this.stateManager.setOnPanelRevealChanged((revealed) => {
+			this.panelManager?.setPermanentVisibility(revealed);
+			this.indicator?.updateIcon(revealed);
 			// Reposition indicator after visibility changes
 			this.indicator?.repositionIndicator();
 		});
@@ -102,9 +102,9 @@ export default class Veil extends Extension {
 
 		this.setupSettingsHandlers();
 
-		const initialVisibility = this.stateManager.getVisibility();
-		this.panelManager.setVisibility(initialVisibility);
-		this.indicator.updateIcon(initialVisibility);
+		const initiallyRevealed = this.stateManager.isPanelRevealed();
+		this.panelManager.setPermanentVisibility(initiallyRevealed);
+		this.indicator.updateIcon(initiallyRevealed);
 
 		logger.info("Veil extension fully initialized");
 	}
@@ -127,7 +127,9 @@ export default class Veil extends Extension {
 				this.stateManager?.onVisibleItemsChanged();
 
 				if (this.stateManager) {
-					this.panelManager?.setVisibility(this.stateManager.getVisibility());
+					this.panelManager?.setPermanentVisibility(
+						this.stateManager.isPanelRevealed(),
+					);
 				}
 			}),
 		);
@@ -149,9 +151,9 @@ export default class Veil extends Extension {
 			return;
 		}
 
-		const newVisibility = this.stateManager.toggleVisibility();
+		const revealed = this.stateManager.togglePanelReveal();
 
-		logger.debug("Visibility toggled", { newVisibility });
+		logger.debug("Panel reveal toggled", { revealed });
 	}
 
 	private handleHoverEnter() {
@@ -160,7 +162,7 @@ export default class Veil extends Extension {
 			return;
 		}
 
-		this.panelManager.temporarilyShowItems();
+		this.panelManager.setTemporaryVisibility();
 	}
 
 	private handleHoverLeave() {
@@ -170,7 +172,7 @@ export default class Veil extends Extension {
 		}
 
 		GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-			this.panelManager?.temporarilyHideItemsWithDelay();
+			this.panelManager?.scheduleTemporaryHide();
 			return GLib.SOURCE_REMOVE;
 		});
 	}
