@@ -6,6 +6,7 @@ import type { PopupMenu as ShellPopupMenu } from "resource:///org/gnome/shell/ui
 import { VeilIndicator } from "./components/indicator.js";
 import { PanelManager } from "./core/panelManager.js";
 import { StateManager } from "./core/stateManager.js";
+import { StatusAreaHorizontalSpacing } from "./core/statusAreaHorizontalSpacing.js";
 import { initializeLogger, logger } from "./utils/logger.js";
 
 export default class Veil extends Extension {
@@ -13,6 +14,8 @@ export default class Veil extends Extension {
 	private settings!: Gio.Settings | null;
 	private panelManager!: PanelManager | null;
 	private stateManager!: StateManager | null;
+	private statusAreaHorizontalSpacing: StatusAreaHorizontalSpacing | null =
+		null;
 	private settingsHandlers: number[] = [];
 
 	enable() {
@@ -45,6 +48,11 @@ export default class Veil extends Extension {
 			indicatorButton,
 			this.stateManager,
 		);
+
+		this.statusAreaHorizontalSpacing = new StatusAreaHorizontalSpacing(
+			this.settings,
+		);
+		this.statusAreaHorizontalSpacing.enable();
 
 		this.indicator.setOnToggle(() => {
 			this.handleToggle();
@@ -212,6 +220,11 @@ export default class Veil extends Extension {
 
 	disable() {
 		logger.info("Veil extension disabled");
+
+		if (this.statusAreaHorizontalSpacing) {
+			this.statusAreaHorizontalSpacing.destroy();
+			this.statusAreaHorizontalSpacing = null;
+		}
 
 		if (this.settings) {
 			this.settingsHandlers.forEach((handlerId) => {

@@ -96,6 +96,27 @@
     </child>
     <child>
       <object class="AdwPreferencesGroup">
+        <property name="title" translatable="true">Status area</property>
+        <property name="description" translatable="true">Spacing between top-panel indicators on the right (GNOME default is 12 px)</property>
+        <child>
+          <object class="AdwSpinRow" id="statusAreaHPadding">
+            <property name="title" translatable="true">Horizontal padding</property>
+            <property name="subtitle" translatable="true">Lower values move status icons closer together</property>
+            <property name="adjustment">
+              <object class="GtkAdjustment">
+                <property name="lower">0</property>
+                <property name="upper">12</property>
+                <property name="step-increment">1</property>
+                <property name="page-increment">3</property>
+                <property name="value">12</property>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="AdwPreferencesGroup">
         <property name="title" translatable="true">Interaction Mode</property>
         <property name="description" translatable="true">Choose how to interact with the Veil indicator</property>
         <child>

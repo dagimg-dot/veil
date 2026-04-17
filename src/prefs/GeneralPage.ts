@@ -14,6 +14,7 @@ export interface GeneralPageChildren {
 	_closeIconButton: Gtk.Button;
 	_openIconClearButton: Gtk.Button;
 	_closeIconClearButton: Gtk.Button;
+	_statusAreaHPadding: Adw.SpinRow;
 	_interactionMode: Adw.ComboRow;
 	_autoHideEnabled: Adw.SwitchRow;
 	_autoHideDuration: Adw.SpinRow;
@@ -39,6 +40,7 @@ export const GeneralPage = GObject.registerClass(
 			"closeIconButton",
 			"openIconClearButton",
 			"closeIconClearButton",
+			"statusAreaHPadding",
 			"interactionMode",
 			"autoHideEnabled",
 			"autoHideDuration",
@@ -96,6 +98,14 @@ export const GeneralPage = GObject.registerClass(
 				"custom-close-icon",
 				"Icon shown when items are visible",
 			);
+
+			const statusHPadding = settings.get_int("status-area-h-padding");
+			children._statusAreaHPadding.set_value(statusHPadding);
+			children._statusAreaHPadding.connect("notify::value", () => {
+				const value = children._statusAreaHPadding.get_value();
+				settings.set_int("status-area-h-padding", value);
+				logger.debug("Status area horizontal padding changed", { value });
+			});
 
 			// Bind interaction mode combo row
 			const interactionMode = settings.get_string("interaction-mode");

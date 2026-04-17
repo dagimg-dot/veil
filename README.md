@@ -27,6 +27,7 @@ It is a modern successor to <a href="https://github.com/fablevi/HideItems">Hide 
 ## Features
 
 - Hide all or choosen items on the right side of the panel
+- Optional tighter horizontal spacing between panel items (icons)
 - Auto hide items after a delay
 - Sleek animations when showing and hiding items
 
@@ -40,6 +41,10 @@ It is a modern successor to <a href="https://github.com/fablevi/HideItems">Hide 
 ## Development
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for development instructions.
+
+## Credits
+
+Status-area horizontal spacing is adapted from [Status Area Horizontal Spacing](https://gitlab.com/p91paul/status-area-horizontal-spacing-gnome-shell-extension) (original extension by Amy Chan / mathematical.coffee@gmail.com; maintained on GitLab by p91paul).
 
 ## Panel items in the screenshot
 
