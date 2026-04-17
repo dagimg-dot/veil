@@ -26,10 +26,12 @@ It is a modern successor to <a href="https://github.com/fablevi/HideItems">Hide 
 
 ## Features
 
-- Hide all or choosen items on the right side of the panel
-- Optional tighter horizontal spacing between panel items (icons)
-- Auto hide items after a delay
-- Sleek animations when showing and hiding items
+- **Selective tray** — When collapsed, only the status icons you pick stay visible on the right; the rest stay hidden until you open the tray again.
+- **Click or hover** — **Click** mode uses the Veil indicator as a toggle. **Hover** mode briefly shows every tray icon while the pointer is over the status area, then restores the collapsed layout when you leave.
+- **Auto-hide (click mode)** — Optionally collapse the tray again automatically after a delay so it doesn’t stay open indefinitely.
+- **Animations** — Optional fade/slide when hiding and showing items; duration and scope are configurable.
+- **Tighter status spacing** — Lower the default horizontal padding between top-bar indicators so the right cluster uses less width, without changing which icons exist.
+- **Coexists with other applets** — Remembers icons that were already hidden by their own extension and does not force them back on when the tray expands.
 
 ## Installation
 
