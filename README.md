@@ -52,3 +52,19 @@ Panel icons shown in the preview come from these extensions:
 - [Power Indicator](https://extensions.gnome.org/extension/1501/power-indicator/)
 - [Easy Effects Preset Switcher](https://github.com/wwmm/easyeffects)
 
+### How other extensions hide status icons
+
+Tray applets usually live in a **container** on the panel. Other extensions typically hide their icon in one of two ways:
+
+1. **Visibility** — They keep the actor in the tree and set `container.visible` to `false` (or equivalent), so the slot still exists but nothing is drawn.
+2. **Removal** — They **remove or destroy** the tray actor (or never add it), so there is no container for Veil to target until the extension adds it again.
+
+### How Veil works
+
+Veil shows and hides panel items by changing **`container.visible`** (and related presentation like opacity/animation) on tray entries it already knows about. It also records whether an item was **already hidden** when Veil last reconciled the tray (`originalVisible`), so it does not force icons back on that their own extension meant to hide.
+
+### If an icon does not behave as you expect
+
+Some extensions hide their icon in a way Veil does not see as “already hidden” at the moment Veil builds its list (for example, if the ordering or lifecycle differs from a simple `visible = false` on the container Veil tracks).
+
+**Workaround:** Turn **Veil off**, use the **other extension’s own settings** to hide its panel icon, then turn **Veil on** again. Veil will then treat that item as externally hidden and will not reveal it when Veil expands the tray.
