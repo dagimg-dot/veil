@@ -9,6 +9,8 @@
  * - **Temporary visibility** (`setTemporaryVisibility` / `scheduleTemporaryHide`)
  *   is hover-only preview: it never updates `StateManager`; teardown restores
  *   via `restoreVisibilityToSavedState` → `setPermanentVisibility(isPanelRevealed())`.
+ * - **`originalVisible === false`** means another extension hid the icon while the
+ *   tray was expanded — not Veil’s own collapsed hide (see `mergeOriginalVisibleSnapshot`).
  */
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
@@ -194,24 +196,53 @@ export class PanelManager {
 	private _onItemAdded(_container: St.Widget, actor: St.Widget) {
 		logger.debug("Panel item added", { actor });
 
-		// Update original visibility when item appears (handles Search Light appearing later)
 		const child = actor.firstChild;
+		const panelRevealed = this.stateManager.isPanelRevealed();
 		if (child) {
 			const itemName = this.getItemName(child as St.Widget);
 			if (itemName) {
 				const existing = this.items.find((i) => i.name === itemName);
-				if (existing) {
-					existing.originalVisible = actor.visible;
+				if (existing && existing.originalVisible !== false) {
+					existing.originalVisible = this.mergeOriginalVisibleSnapshot(
+						existing.originalVisible,
+						actor.visible,
+						panelRevealed,
+					);
 				}
 			}
 		}
+
+		this.updateAllItemsList();
 
 		if (this.initialSetupComplete) {
 			this.applyNewItemVisibility(actor);
 		}
 
-		this.updateAllItemsList();
 		this.onItemsChangedCallback?.(this.getAllItemNames());
+	}
+
+	/**
+	 * `false` = hidden while tray expanded (treat as another extension’s hide).
+	 * When collapsed, `container.visible === false` is often Veil’s hide — use `undefined`.
+	 */
+	private mergeOriginalVisibleSnapshot(
+		prior: boolean | undefined,
+		containerVisible: boolean,
+		panelRevealed: boolean,
+	): boolean | undefined {
+		if (prior === false) {
+			return false;
+		}
+		if (prior === true) {
+			return true;
+		}
+		if (!containerVisible && !panelRevealed) {
+			return undefined;
+		}
+		if (!containerVisible && panelRevealed) {
+			return false;
+		}
+		return true;
 	}
 
 	private applyNewItemVisibility(actor: St.Widget) {
@@ -351,9 +382,13 @@ export class PanelManager {
 				const name = this.getItemName(child as St.Widget);
 
 				if (name) {
-					// Preserve original visibility from tracked items
 					const existing = this.items.find((i) => i.name === name);
-					const originalVis = existing?.originalVisible ?? item.visible;
+					const panelRevealed = this.stateManager.isPanelRevealed();
+					const originalVis = this.mergeOriginalVisibleSnapshot(
+						existing?.originalVisible,
+						item.visible,
+						panelRevealed,
+					);
 
 					items.push({
 						name,
