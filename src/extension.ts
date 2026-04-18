@@ -19,6 +19,7 @@ export default class Veil extends Extension {
 		null;
 	private settingsHandlers: number[] = [];
 	private veilMenuOpenStateHandlerId: number | null = null;
+	private readonly extensionIdleSourceIds: Set<number> = new Set();
 
 	enable() {
 		logger.info("Veil extension enabled");
@@ -87,9 +88,9 @@ export default class Veil extends Extension {
 				() => {
 					if (veilMenu.isOpen) return undefined;
 
-					GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+					this.runOnIdle(() => {
 						if (this.settings?.get_string("interaction-mode") !== "hover") {
-							return GLib.SOURCE_REMOVE;
+							return false;
 						}
 
 						const inside = this.panelManager?.pointerInHoverSafeZone() ?? false;
@@ -98,7 +99,7 @@ export default class Veil extends Extension {
 							this.indicator?.notifyHoverLeaveSyncFromMenu();
 						}
 
-						return GLib.SOURCE_REMOVE;
+						return false;
 					});
 
 					return undefined;
@@ -213,10 +214,18 @@ export default class Veil extends Extension {
 			return;
 		}
 
-		GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+		this.runOnIdle(() => {
 			this.panelManager?.scheduleTemporaryHide();
-			return GLib.SOURCE_REMOVE;
+			return false;
 		});
+	}
+
+	private runOnIdle(handler: () => boolean): void {
+		const id = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+			this.extensionIdleSourceIds.delete(id);
+			return handler();
+		});
+		this.extensionIdleSourceIds.add(id);
 	}
 
 	private handleHoverComplete() {
@@ -231,6 +240,11 @@ export default class Veil extends Extension {
 
 	disable() {
 		logger.info("Veil extension disabled");
+
+		for (const id of this.extensionIdleSourceIds) {
+			GLib.Source.remove(id);
+		}
+		this.extensionIdleSourceIds.clear();
 
 		if (this.statusAreaHorizontalSpacing) {
 			this.statusAreaHorizontalSpacing.destroy();

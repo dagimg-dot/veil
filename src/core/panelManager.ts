@@ -55,6 +55,8 @@ export class PanelManager {
 	// Watch for late accessible_name changes
 	private nameChangeHandlers: Map<St.Widget, number> = new Map();
 	private firstChildHandlers: Map<St.Widget, number> = new Map();
+	/** Pending `idle_add` from tray menu `open-state-changed` (removed in `destroy()`). */
+	private menuCloseIdleSourceIds: Set<number> = new Set();
 
 	constructor(
 		settings: Gio.Settings,
@@ -186,10 +188,7 @@ export class PanelManager {
 				return undefined;
 			}
 			this.clearPointerDownHoverGuard();
-			GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-				this.syncHoverAfterPanelMenuClose();
-				return GLib.SOURCE_REMOVE;
-			});
+			this.scheduleSyncHoverAfterMenuCloseIdle();
 			return undefined;
 		});
 		this.menuOpenStateHandlers.set(child, handlerId);
@@ -213,6 +212,16 @@ export class PanelManager {
 			actor = actor.get_parent();
 		}
 		return false;
+	}
+
+	private scheduleSyncHoverAfterMenuCloseIdle() {
+		const id = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+			this.menuCloseIdleSourceIds.delete(id);
+			this.syncHoverAfterPanelMenuClose();
+			return GLib.SOURCE_REMOVE;
+		});
+
+		this.menuCloseIdleSourceIds.add(id);
 	}
 
 	private syncHoverAfterPanelMenuClose() {
@@ -702,6 +711,10 @@ export class PanelManager {
 
 	destroy() {
 		this.cancelHoverHideTimer();
+		for (const id of this.menuCloseIdleSourceIds) {
+			GLib.Source.remove(id);
+		}
+		this.menuCloseIdleSourceIds.clear();
 		this.animationManager.destroy();
 
 		for (const [child, ids] of this.itemHoverHandlers) {
