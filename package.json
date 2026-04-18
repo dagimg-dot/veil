@@ -31,6 +31,7 @@
     "check": "biome check --write .",
     "check:types": "tsc -noEmit",
     "bump": "bun scripts/bump-version.js bump",
-    "release": "bun scripts/bump-version.js release"
+    "release": "bun scripts/bump-version.js release",
+    "shexli": "shexli \"$(pwd)/dist\""
   }
 }

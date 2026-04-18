@@ -45,6 +45,17 @@ export const initializeLogger = (settings: Gio.Settings) => {
 	});
 };
 
+const formatLogSuffix = (data: unknown): string => {
+	if (typeof data === "object" && data !== null) {
+		try {
+			return ` ${JSON.stringify(data)}`;
+		} catch {
+			return " [Object]";
+		}
+	}
+	return ` ${String(data)}`;
+};
+
 const log = (
 	level: LogLevel,
 	message: string,
@@ -60,20 +71,13 @@ const log = (
 	const levelName = LogLevel[level];
 	const prefix = `[${PROJECT_NAME}] ${timestamp} ${levelName}`;
 
-	if (data) {
-		console.log(`${prefix}: ${message}`);
+	let line = `${prefix}: ${message}`;
 
-		// Display each property individually to avoid GNOME Shell truncation
-		if (typeof data === "object" && data !== null) {
-			Object.entries(data).forEach(([key, value]) => {
-				console.log(`${prefix}:   ${key}: ${value}`);
-			});
-		} else {
-			console.log(`${prefix}: ${data}`);
-		}
-	} else {
-		console.log(`${prefix}: ${message}`);
+	if (data) {
+		line += formatLogSuffix(data);
 	}
+
+	console.log(line);
 };
 
 const debug = (message: string, data?: unknown) => {
@@ -88,16 +92,14 @@ const warn = (message: string, data?: unknown) => {
 	log(LogLevel.WARN, message, data);
 };
 
-const error = (message: string, error?: unknown) => {
+const error = (message: string, err?: unknown) => {
 	const timestamp = new Date().toISOString();
 	const prefix = `[${PROJECT_NAME}] ${timestamp} ERROR`;
-
-	if (error) {
-		console.error(`${prefix}: ${message}`);
-		console.error(`${prefix}: ${String(error)}`);
-	} else {
-		console.error(`${prefix}: ${message}`);
-	}
+	const line =
+		err !== undefined
+			? `${prefix}: ${message}: ${String(err)}`
+			: `${prefix}: ${message}`;
+	console.error(line);
 };
 
 export const logger = {
