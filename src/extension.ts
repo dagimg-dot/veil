@@ -7,6 +7,7 @@ import { VeilIndicator } from "./components/indicator.js";
 import { PanelManager } from "./core/panelManager.js";
 import { StateManager } from "./core/stateManager.js";
 import { StatusAreaHorizontalSpacing } from "./core/statusAreaHorizontalSpacing.js";
+import { Icons } from "./lib/icons.js";
 import { initializeLogger, logger } from "./utils/logger.js";
 
 export default class Veil extends Extension {
@@ -17,6 +18,7 @@ export default class Veil extends Extension {
 	private statusAreaHorizontalSpacing: StatusAreaHorizontalSpacing | null =
 		null;
 	private settingsHandlers: number[] = [];
+	private veilMenuOpenStateHandlerId: number | null = null;
 
 	enable() {
 		logger.info("Veil extension enabled");
@@ -78,21 +80,30 @@ export default class Veil extends Extension {
 
 		const veilButton = this.indicator.getButton();
 		const veilMenu = veilButton.menu as ShellPopupMenu | null;
+
 		if (veilMenu) {
-			veilMenu.connect("open-state-changed", () => {
-				if (veilMenu.isOpen) return undefined;
-				GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-					if (this.settings?.get_string("interaction-mode") !== "hover") {
+			this.veilMenuOpenStateHandlerId = veilMenu.connect(
+				"open-state-changed",
+				() => {
+					if (veilMenu.isOpen) return undefined;
+
+					GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+						if (this.settings?.get_string("interaction-mode") !== "hover") {
+							return GLib.SOURCE_REMOVE;
+						}
+
+						const inside = this.panelManager?.pointerInHoverSafeZone() ?? false;
+
+						if (!inside) {
+							this.indicator?.notifyHoverLeaveSyncFromMenu();
+						}
+
 						return GLib.SOURCE_REMOVE;
-					}
-					const inside = this.panelManager?.pointerInHoverSafeZone() ?? false;
-					if (!inside) {
-						this.indicator?.notifyHoverLeaveSyncFromMenu();
-					}
-					return GLib.SOURCE_REMOVE;
-				});
-				return undefined;
-			});
+					});
+
+					return undefined;
+				},
+			);
 		}
 
 		this.stateManager.setOnPanelRevealChanged((revealed) => {
@@ -231,12 +242,21 @@ export default class Veil extends Extension {
 				this.settings?.disconnect(handlerId);
 			});
 			this.settingsHandlers = [];
+			Icons.teardown(this.settings);
 		}
 
 		if (this.panelManager) {
 			this.panelManager.showAllItems();
 			this.panelManager.destroy();
 			this.panelManager = null;
+		}
+
+		if (this.veilMenuOpenStateHandlerId !== null && this.indicator) {
+			const menu = this.indicator.getButton().menu as ShellPopupMenu | null;
+			if (menu) {
+				menu.disconnect(this.veilMenuOpenStateHandlerId);
+			}
+			this.veilMenuOpenStateHandlerId = null;
 		}
 
 		if (this.indicator) {

@@ -48,6 +48,8 @@ export class PanelManager {
 	private hoverInteractionZone: HoverInteractionZone = "none";
 	/** True between button-press and release on a right-box item (avoids spurious leave on click). */
 	private pointerDownOnPanelItem = false;
+	/** Per-tray-applet hover/press signals on `actor.firstChild` (enter, leave, press, release). */
+	private itemHoverHandlers: Map<Clutter.Actor, number[]> = new Map();
 	/** `open-state-changed` on each tray `PanelMenu.Button.menu`, keyed by the button actor */
 	private menuOpenStateHandlers: Map<Clutter.Actor, number> = new Map();
 	// Watch for late accessible_name changes
@@ -93,40 +95,68 @@ export class PanelManager {
 		});
 	}
 
+	private detachHoverHandlersFromChild(child: Clutter.Actor) {
+		const ids = this.itemHoverHandlers.get(child);
+		if (!ids) return;
+
+		for (const id of ids) {
+			child.disconnect(id);
+		}
+
+		this.itemHoverHandlers.delete(child);
+	}
+
 	private attachHoverHandlers(_actor: St.Widget, child: Clutter.Actor) {
-		child.connect("enter-event", () => {
-			if (this.settings.get_string("interaction-mode") !== "hover") {
+		this.detachHoverHandlersFromChild(child);
+
+		const ids: number[] = [];
+
+		ids.push(
+			child.connect("enter-event", () => {
+				if (this.settings.get_string("interaction-mode") !== "hover") {
+					return Clutter.EVENT_PROPAGATE;
+				}
+				this.setHoverInteractionZone("panel");
 				return Clutter.EVENT_PROPAGATE;
-			}
-			this.setHoverInteractionZone("panel");
-			return Clutter.EVENT_PROPAGATE;
-		});
-		child.connect("leave-event", () => {
-			if (this.settings.get_string("interaction-mode") !== "hover") {
+			}),
+		);
+
+		ids.push(
+			child.connect("leave-event", () => {
+				if (this.settings.get_string("interaction-mode") !== "hover") {
+					return Clutter.EVENT_PROPAGATE;
+				}
+				const shellMenu =
+					child instanceof PanelMenu.Button
+						? (child.menu as ShellPopupMenu | null)
+						: null;
+				if (shellMenu?.isOpen) {
+					return Clutter.EVENT_PROPAGATE;
+				}
+				if (this.pointerDownOnPanelItem) {
+					return Clutter.EVENT_PROPAGATE;
+				}
+				this.setHoverInteractionZone("none");
+				this.onPanelLeaveCallback?.();
 				return Clutter.EVENT_PROPAGATE;
-			}
-			const shellMenu =
-				child instanceof PanelMenu.Button
-					? (child.menu as ShellPopupMenu | null)
-					: null;
-			if (shellMenu?.isOpen) {
+			}),
+		);
+
+		ids.push(
+			child.connect("button-press-event", () => {
+				this.pointerDownOnPanelItem = true;
 				return Clutter.EVENT_PROPAGATE;
-			}
-			if (this.pointerDownOnPanelItem) {
+			}),
+		);
+
+		ids.push(
+			child.connect("button-release-event", () => {
+				this.pointerDownOnPanelItem = false;
 				return Clutter.EVENT_PROPAGATE;
-			}
-			this.setHoverInteractionZone("none");
-			this.onPanelLeaveCallback?.();
-			return Clutter.EVENT_PROPAGATE;
-		});
-		child.connect("button-press-event", () => {
-			this.pointerDownOnPanelItem = true;
-			return Clutter.EVENT_PROPAGATE;
-		});
-		child.connect("button-release-event", () => {
-			this.pointerDownOnPanelItem = false;
-			return Clutter.EVENT_PROPAGATE;
-		});
+			}),
+		);
+
+		this.itemHoverHandlers.set(child, ids);
 		this.attachMenuOpenStateHandlerIfNeeded(child);
 	}
 
@@ -307,6 +337,8 @@ export class PanelManager {
 
 		const child = actor.firstChild;
 		if (child) {
+			this.detachHoverHandlersFromChild(child);
+
 			const nameHandler = this.nameChangeHandlers.get(child as St.Widget);
 			if (nameHandler !== undefined) {
 				(child as St.Widget).disconnect(nameHandler);
@@ -671,6 +703,14 @@ export class PanelManager {
 	destroy() {
 		this.cancelHoverHideTimer();
 		this.animationManager.destroy();
+
+		for (const [child, ids] of this.itemHoverHandlers) {
+			for (const id of ids) {
+				child.disconnect(id);
+			}
+		}
+
+		this.itemHoverHandlers.clear();
 
 		for (const [child, handlerId] of this.menuOpenStateHandlers) {
 			const button = child as PanelMenu.Button;

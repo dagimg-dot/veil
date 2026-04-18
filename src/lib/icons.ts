@@ -7,6 +7,8 @@ export class Icons {
 	static #icons = new Map<ICON, Gio.Icon>();
 	static #extPath = "";
 	static #settings: Gio.Settings | null = null;
+	static #customOpenHandlerId: number | null = null;
+	static #customCloseHandlerId: number | null = null;
 
 	constructor(extPath: string, settings?: Gio.Settings) {
 		Icons.#extPath = extPath;
@@ -16,14 +18,33 @@ export class Icons {
 
 		// Watch for settings changes
 		if (Icons.#settings) {
-			Icons.#settings.connect("changed::custom-open-icon", () => {
-				this.loadIcon("arrow-open");
-			});
+			Icons.#customOpenHandlerId = Icons.#settings.connect(
+				"changed::custom-open-icon",
+				() => {
+					this.loadIcon("arrow-open");
+				},
+			);
 
-			Icons.#settings.connect("changed::custom-close-icon", () => {
-				this.loadIcon("arrow-close");
-			});
+			Icons.#customCloseHandlerId = Icons.#settings.connect(
+				"changed::custom-close-icon",
+				() => {
+					this.loadIcon("arrow-close");
+				},
+			);
 		}
+	}
+
+	/** Disconnect settings signals (call from extension `disable()` while settings is still valid). */
+	static teardown(settings: Gio.Settings) {
+		if (Icons.#customOpenHandlerId !== null) {
+			settings.disconnect(Icons.#customOpenHandlerId);
+			Icons.#customOpenHandlerId = null;
+		}
+		if (Icons.#customCloseHandlerId !== null) {
+			settings.disconnect(Icons.#customCloseHandlerId);
+			Icons.#customCloseHandlerId = null;
+		}
+		Icons.#settings = null;
 	}
 
 	private loadIcons() {

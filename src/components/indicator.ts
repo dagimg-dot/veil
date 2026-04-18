@@ -10,7 +10,7 @@ import { MainPanel } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 
 export class VeilIndicator {
-	private indicator: PanelMenu.Button;
+	private indicator: PanelMenu.Button | null = null;
 	private extension: Extension;
 	private iconWidget: St.Icon | null = null;
 	private onToggleCallback?: () => void;
@@ -18,6 +18,7 @@ export class VeilIndicator {
 	private onHoverLeaveCallback?: () => void;
 	private settings: Gio.Settings;
 	private isHovering = false;
+	private readonly indicatorSignalIds: number[] = [];
 
 	constructor(extension: Extension, settings: Gio.Settings) {
 		this.extension = extension;
@@ -29,52 +30,66 @@ export class VeilIndicator {
 		this.setupHoverHandlers();
 	}
 
+	private get panelButton(): PanelMenu.Button {
+		if (this.indicator === null) {
+			throw new Error("VeilIndicator used after destroy");
+		}
+		return this.indicator;
+	}
+
 	private setupUI() {
 		new Icons(this.extension.path, this.settings);
 		this.updateIcon(true);
 	}
 
 	private setupClickHandler() {
-		this.indicator.connect("button-press-event", (_actor, event) => {
-			const button = event.get_button();
+		const btn = this.panelButton;
+		this.indicatorSignalIds.push(
+			btn.connect("button-press-event", (_actor, event) => {
+				const button = event.get_button();
 
-			if (button === Clutter.BUTTON_PRIMARY) {
-				const interactionMode = this.settings.get_string("interaction-mode");
+				if (button === Clutter.BUTTON_PRIMARY) {
+					const interactionMode = this.settings.get_string("interaction-mode");
 
-				// Only handle clicks in Click mode
-				if (interactionMode === "click") {
-					logger.debug("Primary click on Veil indicator");
-					this.onToggleCallback?.();
+					// Only handle clicks in Click mode
+					if (interactionMode === "click") {
+						logger.debug("Primary click on Veil indicator");
+						this.onToggleCallback?.();
 
-					if (this.indicator.menu) {
-						this.indicator.menu.close();
+						const menu = this.panelButton.menu;
+						if (menu) {
+							menu.close();
+						}
+					} else {
+						logger.debug("Click ignored in Hover mode");
 					}
-				} else {
-					logger.debug("Click ignored in Hover mode");
 				}
-			}
-		});
+			}),
+		);
 
 		// Add touch support
-		this.indicator.connect("touch-event", (_actor, event) => {
-			const eventType = event.type();
+		this.indicatorSignalIds.push(
+			btn.connect("touch-event", (_actor, event) => {
+				const eventType = event.type();
 
-			if (eventType === Clutter.EventType.TOUCH_BEGIN) {
-				const interactionMode = this.settings.get_string("interaction-mode");
+				if (eventType === Clutter.EventType.TOUCH_BEGIN) {
+					const interactionMode = this.settings.get_string("interaction-mode");
 
-				// Only handle touch in Click mode
-				if (interactionMode === "click") {
-					logger.debug("Touch begin on Veil indicator");
-					this.onToggleCallback?.();
+					// Only handle touch in Click mode
+					if (interactionMode === "click") {
+						logger.debug("Touch begin on Veil indicator");
+						this.onToggleCallback?.();
 
-					if (this.indicator.menu) {
-						this.indicator.menu.close();
+						const menu = this.panelButton.menu;
+						if (menu) {
+							menu.close();
+						}
+					} else {
+						logger.debug("Touch ignored in Hover mode");
 					}
-				} else {
-					logger.debug("Touch ignored in Hover mode");
 				}
-			}
-		});
+			}),
+		);
 	}
 
 	private setupMenu() {
@@ -84,14 +99,15 @@ export class VeilIndicator {
 			this.extension.openPreferences();
 		});
 
-		if (this.indicator.menu && "addMenuItem" in this.indicator.menu) {
-			this.indicator.menu.addMenuItem(settingsItem);
+		const menu = this.panelButton.menu;
+		if (menu && "addMenuItem" in menu) {
+			menu.addMenuItem(settingsItem);
 		}
 	}
 
 	updateIcon(isVisible: boolean) {
 		if (this.iconWidget) {
-			this.indicator.remove_child(this.iconWidget);
+			this.panelButton.remove_child(this.iconWidget);
 			this.iconWidget = null;
 		}
 
@@ -105,7 +121,7 @@ export class VeilIndicator {
 				style_class: "system-status-icon",
 			});
 
-			this.indicator.add_child(this.iconWidget);
+			this.panelButton.add_child(this.iconWidget);
 			logger.debug("Icon updated", { iconName, isVisible });
 		}
 	}
@@ -127,7 +143,7 @@ export class VeilIndicator {
 	}
 
 	repositionIndicator() {
-		const indicatorButton = this.indicator;
+		const indicatorButton = this.panelButton;
 		const container = indicatorButton.get_parent();
 
 		if (!container) return;
@@ -161,29 +177,34 @@ export class VeilIndicator {
 	}
 
 	private setupHoverHandlers() {
-		this.indicator.connect("enter-event", () => {
-			const interactionMode = this.settings.get_string("interaction-mode");
+		const btn = this.panelButton;
+		this.indicatorSignalIds.push(
+			btn.connect("enter-event", () => {
+				const interactionMode = this.settings.get_string("interaction-mode");
 
-			// Only handle hover in Hover mode
-			if (interactionMode === "hover") {
-				this.isHovering = true;
-				// Change icon to visible state during hover
-				this.updateIcon(true);
-				this.onHoverEnterCallback?.();
-			}
-			return Clutter.EVENT_PROPAGATE;
-		});
+				// Only handle hover in Hover mode
+				if (interactionMode === "hover") {
+					this.isHovering = true;
+					// Change icon to visible state during hover
+					this.updateIcon(true);
+					this.onHoverEnterCallback?.();
+				}
+				return Clutter.EVENT_PROPAGATE;
+			}),
+		);
 
-		this.indicator.connect("leave-event", () => {
-			const interactionMode = this.settings.get_string("interaction-mode");
+		this.indicatorSignalIds.push(
+			btn.connect("leave-event", () => {
+				const interactionMode = this.settings.get_string("interaction-mode");
 
-			// Only handle hover in Hover mode
-			if (interactionMode === "hover") {
-				this.isHovering = false;
-				this.onHoverLeaveCallback?.();
-			}
-			return Clutter.EVENT_PROPAGATE;
-		});
+				// Only handle hover in Hover mode
+				if (interactionMode === "hover") {
+					this.isHovering = false;
+					this.onHoverLeaveCallback?.();
+				}
+				return Clutter.EVENT_PROPAGATE;
+			}),
+		);
 	}
 
 	setOnToggle(callback: () => void) {
@@ -213,12 +234,24 @@ export class VeilIndicator {
 	}
 
 	getButton(): PanelMenu.Button {
-		return this.indicator;
+		return this.panelButton;
 	}
 
 	destroy() {
 		if (this.indicator) {
+			for (const id of this.indicatorSignalIds) {
+				this.indicator.disconnect(id);
+			}
+			this.indicatorSignalIds.length = 0;
+		}
+		if (this.iconWidget && this.indicator) {
+			this.indicator.remove_child(this.iconWidget);
+			this.iconWidget.destroy();
+			this.iconWidget = null;
+		}
+		if (this.indicator) {
 			this.indicator.destroy();
+			this.indicator = null;
 		}
 	}
 }
