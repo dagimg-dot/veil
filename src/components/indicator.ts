@@ -44,25 +44,50 @@ export class VeilIndicator {
 
 	private setupClickHandler() {
 		const btn = this.panelButton;
+
+		const onPrimaryClick = () => {
+			const interactionMode = this.settings.get_string("interaction-mode");
+
+			// Only handle clicks in Click mode
+			if (interactionMode === "click") {
+				logger.debug("Primary click on Veil indicator");
+				this.onToggleCallback?.();
+
+				const menu = this.panelButton.menu;
+				if (menu) {
+					menu.close();
+				}
+			} else {
+				logger.debug("Click ignored in Hover mode");
+			}
+		};
+
+		// GNOME 50+: intercept the click gesture before it shows the default menu.
+		// The gesture's 'recognize' handler receives the action itself;
+		// action.get_button() returns the mouse button that triggered it.
+		// biome-ignore lint/suspicious/noExplicitAny: _clickGesture is a private internal API not in GJS types
+		const gesture = (btn as any)._clickGesture;
+		if (gesture) {
+			this.indicatorSignalIds.push(
+				// biome-ignore lint/suspicious/noExplicitAny: gesture action type not available in GJS types
+				gesture.connect("recognize", (action: any) => {
+					if (action.get_button() === Clutter.BUTTON_PRIMARY) {
+						onPrimaryClick();
+					}
+					// Return PROPAGATE (false) to reject the gesture and prevent
+					// the default menu handler from showing on click.
+					return Clutter.EVENT_PROPAGATE;
+				}),
+			);
+		}
+
+		// Pre-GNOME 50 fallback: handle button-press-event
 		this.indicatorSignalIds.push(
 			btn.connect("button-press-event", (_actor, event) => {
 				const button = event.get_button();
 
 				if (button === Clutter.BUTTON_PRIMARY) {
-					const interactionMode = this.settings.get_string("interaction-mode");
-
-					// Only handle clicks in Click mode
-					if (interactionMode === "click") {
-						logger.debug("Primary click on Veil indicator");
-						this.onToggleCallback?.();
-
-						const menu = this.panelButton.menu;
-						if (menu) {
-							menu.close();
-						}
-					} else {
-						logger.debug("Click ignored in Hover mode");
-					}
+					onPrimaryClick();
 				}
 			}),
 		);
@@ -73,20 +98,7 @@ export class VeilIndicator {
 				const eventType = event.type();
 
 				if (eventType === Clutter.EventType.TOUCH_BEGIN) {
-					const interactionMode = this.settings.get_string("interaction-mode");
-
-					// Only handle touch in Click mode
-					if (interactionMode === "click") {
-						logger.debug("Touch begin on Veil indicator");
-						this.onToggleCallback?.();
-
-						const menu = this.panelButton.menu;
-						if (menu) {
-							menu.close();
-						}
-					} else {
-						logger.debug("Touch ignored in Hover mode");
-					}
+					onPrimaryClick();
 				}
 			}),
 		);
