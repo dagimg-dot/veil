@@ -88,7 +88,8 @@ function build_extension_package() {
 			(
 				cd src/
 				find . -type f ! -name '*.ts' | while read -r FILE; do
-					cp --parents "$FILE" ../dist/
+					mkdir -p "../dist/$(dirname "$FILE")"
+					cp "$FILE" "../dist/$FILE"
 				done
 			)
 			echo "Done."
@@ -109,9 +110,7 @@ function build_extension_package() {
 		if command -v glib-compile-resources &>/dev/null; then
 			compile_resources
 		else
-			echo "ERROR: glib-compile-resources isn't installed. Resources won't be compiled. This may cause errors for the extension. Please install glib-compile-resources and rebuild the extension. Exiting..."
-
-			exit 1
+			echo "WARNING: glib-compile-resources isn't installed. Resources won't be compiled. The extension may not work correctly without them."
 		fi
 	fi
 
@@ -120,9 +119,7 @@ function build_extension_package() {
 		if command -v glib-compile-schemas &>/dev/null; then
 			compile_schemas
 		else
-			echo "ERROR: glib-compile-schemas isn't installed. Schemas won't be compiled. This may cause errors for the extension. Please install glib-compile-schemas and rebuild the extension. Exiting..."
-
-			exit 1
+			echo "WARNING: glib-compile-schemas isn't installed. Schemas won't be compiled."
 		fi
 	fi
 
@@ -262,8 +259,8 @@ function usage() {
 
 cd -- "$(dirname "$0")/../"
 
-UUID=$(grep -oP '"uuid": "\K[^"]+' metadata.json)
-VERSION=$(grep -oP '"version": "\K[^"]+' package.json)
+UUID=$(sed -n 's/.*"uuid": "\([^"]*\)".*/\1/p' metadata.json)
+VERSION=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' package.json)
 BUILD_DIR="build"
 RESOURCE_XML="$BUILD_DIR/$UUID.gresource.xml"
 RESOURCE_TARGET="$BUILD_DIR/$UUID.gresource"
