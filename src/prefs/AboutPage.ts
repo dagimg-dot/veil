@@ -61,7 +61,7 @@ export const AboutPage = GObject.registerClass(
 
             this._extensionName.set_text(metadata.name);
             this._extensionVersion.set_text(
-                `v${metadata["version-name"] || metadata.version}${__VICINAE_ENV_SUFFIX__ ?? ""}`,
+                `v${metadata["version-name"] || metadata.version}${__VEIL_ENV_SUFFIX__}`,
             );
 
             if (metadata.url) {

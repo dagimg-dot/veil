@@ -43,7 +43,7 @@ await esbuild.build({
     mainFields: ["module", "main"],
     conditions: ["module", "import", "default"],
     define: {
-        __VICINAE_ENV_SUFFIX__: JSON.stringify(envSuffix),
+        __VEIL_ENV_SUFFIX__: JSON.stringify(envSuffix),
     },
     plugins: [esbuildPreserveWhitespacePlugin()],
 });
