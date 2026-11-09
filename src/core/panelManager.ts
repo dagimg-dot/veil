@@ -97,6 +97,12 @@ export class PanelManager {
         });
     }
 
+    private forgetChild(child: Clutter.Actor) {
+        this.itemHoverHandlers.delete(child);
+        this.nameChangeHandlers.delete(child as St.Widget);
+        this.menuOpenStateHandlers.delete(child);
+    }
+
     private detachHoverHandlersFromChild(child: Clutter.Actor) {
         const ids = this.itemHoverHandlers.get(child);
         if (!ids) return;
@@ -155,6 +161,12 @@ export class PanelManager {
             child.connect("button-release-event", () => {
                 this.pointerDownOnPanelItem = false;
                 return Clutter.EVENT_PROPAGATE;
+            }),
+        );
+
+        ids.push(
+            child.connect("destroy", () => {
+                this.forgetChild(child);
             }),
         );
 
@@ -729,6 +741,16 @@ export class PanelManager {
             if (button.menu) button.menu.disconnect(handlerId);
         }
         this.menuOpenStateHandlers.clear();
+
+        for (const [child, handlerId] of this.nameChangeHandlers) {
+            child.disconnect(handlerId);
+        }
+        this.nameChangeHandlers.clear();
+
+        for (const [actor, handlerId] of this.firstChildHandlers) {
+            actor.disconnect(handlerId);
+        }
+        this.firstChildHandlers.clear();
 
         this.hiddenByVeil.clear();
 
