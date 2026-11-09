@@ -17,7 +17,7 @@
   },
   "scripts": {
     "dev": "bun check && ./scripts/build.sh --build --unsafe-reload",
-    "dev:nested": "bun build:install && ./scripts/nested-dev.sh",
+    "dev:nested": "bun build:install && env MUTTER_DEBUG_DUMMY_MODE_SPECS=1500x900 ./scripts/run-dev-session.sh",
     "build": "./scripts/build.sh --build",
     "build:install": "bun check && ./scripts/build.sh --build --install",
     "build:install:gdm": "bun check && ./scripts/build.sh --build --install --restart-gdm",
@@ -25,12 +25,12 @@
     "log": "./scripts/log.sh -f",
     "log:all": "./scripts/log.sh",
     "lint": "biome lint --write .",
-    "lint:unsafe": "biome lint --write --unsafe .",
+    "lint:fix": "biome lint --write --unsafe .",
     "format": "biome format --write .",
     "check": "biome check --write .",
     "check:types": "tsc -noEmit && bun scripts/check-no-any.js",
     "bump": "bun scripts/bump-version.js bump",
     "release": "bun scripts/bump-version.js release",
-    "shexli": "shexli \"$(pwd)/dist\""
+    "shexli": "shexli $(pwd)/dist"
   }
 }
