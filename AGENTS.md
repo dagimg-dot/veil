@@ -34,6 +34,8 @@ are newer in one than the other, so check which way each difference goes.
   `declare`d on the class. Shell internals missing from the typings get an interface in
   `src/types/index.ts`. A `catch` value handed to the logger is cast to `LogError`.
 - **Signals and sources.** Everything connected or scheduled in `enable` is released in `disable`.
+  Shell-side signals use `connectObject` with an owner and `disconnectObject`; plain `connect` is
+  for `src/prefs`, where `connectObject` does not exist.
   An applet can be destroyed before its container leaves the box, so never touch a child after its
   `destroy`.
 - **Animation.** Clutter transitions, slide and fade, through `AnimationManager`. Every transition
