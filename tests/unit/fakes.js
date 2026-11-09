@@ -40,6 +40,9 @@ class PropertyTransition {
     set_progress_mode(value) {
         this.mode = value;
     }
+    set_remove_on_complete(value) {
+        this.removeOnComplete = value;
+    }
 }
 
 export const Clutter = {
@@ -82,6 +85,7 @@ export class Signals {
 
 export class Widget extends Signals {
     visible = true;
+    onStage = true;
     opacity = 255;
     translationX = 0;
     accessible_name = "";
@@ -92,6 +96,10 @@ export class Widget extends Signals {
 
     get firstChild() {
         return this.children[0] ?? null;
+    }
+
+    is_mapped() {
+        return this.onStage && this.visible;
     }
 
     get_children() {
