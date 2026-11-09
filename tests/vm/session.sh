@@ -5,6 +5,7 @@ export VM_TEST_LOG="$VM_TEST_WORK/gnome-shell.log"
 export WAYLAND_DISPLAY="veil-test-0"
 export GDK_DISABLE=gl,vulkan GDK_DEBUG=no-portals GTK_A11Y=none
 export XDG_CURRENT_DESKTOP=GNOME
+dbus-update-activation-environment WAYLAND_DISPLAY GDK_DISABLE GDK_DEBUG GTK_A11Y XDG_CURRENT_DESKTOP
 
 gsettings set org.gnome.shell disable-user-extensions false
 gsettings set org.gnome.shell disable-extension-version-validation true
