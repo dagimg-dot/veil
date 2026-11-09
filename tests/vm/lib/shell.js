@@ -171,7 +171,11 @@ export const windowClasses = () => helperCall("windowClasses");
 export const closeWindows = (wmClass) => helperCall("closeWindows", wmClass);
 
 export const itemCenter = (role) => helperCall("itemCenter", role);
-export const toggleTray = () => clickAt(...indicatorCenter());
+
+export function toggleTray() {
+    waitFor("the indicator's position", () => indicatorCenter()[0] > 0);
+    clickAt(...indicatorCenter());
+}
 
 export function setTrayRevealed(revealed) {
     if (trayRevealed() !== revealed) toggleTray();
