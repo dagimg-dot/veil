@@ -139,7 +139,7 @@ REMOTE_EOF
 )
 
 TMP_LOCAL=$(mktemp)
-TMP_REMOTE_SCRIPT="/tmp/setup-vicinae-$$.sh"
+TMP_REMOTE_SCRIPT="/tmp/setup-${PROJECT_NAME}-$$.sh"
 
 echo "$REMOTE_SETUP_SCRIPT" >"$TMP_LOCAL"
 

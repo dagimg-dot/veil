@@ -54,14 +54,16 @@ echo "Filtered: $FILTERED"
 echo "Press Ctrl+C to stop capturing logs."
 echo
 
-capture_gnome_shell_extension_logs() {
+capture_extension_logs() {
     if [ "$FILTERED" = true ]; then
-        journalctl /usr/bin/gnome-shell -f -o cat | awk '
-        /^\['"$PROJECT_NAME"'\]/ {
+        journalctl --user -f -o cat | awk '
+        /\['"$PROJECT_NAME"'\]/ || /'"$PROJECT_NAME"'/ {
             print
+            fflush()
         }
         /^Extension/ {
             print
+            fflush()
         }
         /^Stack trace:/ {
             print
@@ -70,6 +72,7 @@ capture_gnome_shell_extension_logs() {
                 print
             }
             print ""
+            fflush()
         }
         /^JS ERROR:/ {
             print
@@ -78,43 +81,11 @@ capture_gnome_shell_extension_logs() {
                 print
             }
             print ""
+            fflush()
         }'
     else
-        journalctl /usr/bin/gnome-shell -f -o cat
+        journalctl --user -f -o cat
     fi
 }
 
-capture_gnome_shell_extension_pref_logs() {
-    if [ "$FILTERED" = true ]; then
-        journalctl /usr/bin/gjs -f -o cat | awk '
-        /^'"$PROJECT_NAME"'/ {
-            print
-        }
-        /^Extension/ {
-            print
-        }
-        /^Stack trace:/ {
-            print
-            while (getline > 0) {
-                if ($0 ~ /^[[:space:]]*$/) break
-                print
-            }
-            print ""
-        }
-        /^JS ERROR:/ {
-            print
-            while (getline > 0) {
-                if ($0 ~ /^[[:space:]]*$/) break
-                print
-            }
-            print ""
-        }'
-    else
-        journalctl /usr/bin/gjs -f -o cat
-    fi
-}
-
-capture_gnome_shell_extension_logs &
-capture_gnome_shell_extension_pref_logs &
-
-wait
+capture_extension_logs

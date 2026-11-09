@@ -234,6 +234,7 @@ function usage() {
 		  $(basename "$0") [OPTION]
 
 		Options:
+		  -b, --build           Build the extension package (default)
 		  -i, --install         Install the extension after building
 		  -r, --unsafe-reload   Build and install the extension, then reload GNOME
 		                        Shell. This is for development purposes as it restarts
