@@ -18,11 +18,12 @@ export interface PanelItem {
 
 export interface ClickGesture {
     get_button(): number;
-    connect(
+    connectObject(
         signal: "recognize",
         handler: (action: ClickGesture) => boolean,
-    ): number;
-    disconnect(id: number): void;
+        owner: object,
+    ): void;
+    disconnectObject(owner: object): void;
 }
 
 export type GesturePanelButton = PanelMenuButton & {

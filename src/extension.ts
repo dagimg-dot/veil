@@ -22,8 +22,6 @@ export default class Veil extends Extension {
     private stateManager!: StateManager | null;
     private statusAreaHorizontalSpacing: StatusAreaHorizontalSpacing | null =
         null;
-    private settingsHandlers: number[] = [];
-    private veilMenuOpenStateHandlerId: number | null = null;
     private readonly extensionIdleSourceIds: Set<number> = new Set();
 
     override enable() {
@@ -88,7 +86,7 @@ export default class Veil extends Extension {
         const veilMenu = veilButton.menu as ShellPopupMenu | null;
 
         if (veilMenu) {
-            this.veilMenuOpenStateHandlerId = veilMenu.connect(
+            veilMenu.connectObject(
                 "open-state-changed",
                 () => {
                     if (veilMenu.isOpen) return undefined;
@@ -114,6 +112,7 @@ export default class Veil extends Extension {
 
                     return undefined;
                 },
+                this,
             );
         }
 
@@ -142,18 +141,17 @@ export default class Veil extends Extension {
     private setupSettingsHandlers(): void {
         if (!this.settings) return;
 
-        this.settingsHandlers.push(
-            this.settings.connect("changed::save-state", () => {
+        this.settings.connectObject(
+            "changed::save-state",
+            () => {
                 this.stateManager?.onSaveStateChanged();
-            }),
-        );
-        this.settingsHandlers.push(
-            this.settings.connect("changed::default-visibility", () => {
+            },
+            "changed::default-visibility",
+            () => {
                 this.stateManager?.onDefaultVisibilityChanged();
-            }),
-        );
-        this.settingsHandlers.push(
-            this.settings.connect("changed::visible-items", () => {
+            },
+            "changed::visible-items",
+            () => {
                 this.stateManager?.onVisibleItemsChanged();
 
                 if (this.stateManager) {
@@ -161,10 +159,9 @@ export default class Veil extends Extension {
                         this.stateManager.isPanelRevealed(),
                     );
                 }
-            }),
-        );
-        this.settingsHandlers.push(
-            this.settings.connect("changed::interaction-mode", () => {
+            },
+            "changed::interaction-mode",
+            () => {
                 const mode =
                     this.settings && readInteractionMode(this.settings);
                 if (mode === "hover") {
@@ -181,7 +178,8 @@ export default class Veil extends Extension {
                 } else if (mode === "click") {
                     this.panelManager?.resetHoverStateForModeEntry();
                 }
-            }),
+            },
+            this,
         );
     }
 
@@ -262,10 +260,7 @@ export default class Veil extends Extension {
         }
 
         if (this.settings) {
-            this.settingsHandlers.forEach((handlerId) => {
-                this.settings?.disconnect(handlerId);
-            });
-            this.settingsHandlers = [];
+            this.settings.disconnectObject(this);
             Icons.teardown(this.settings);
             deinitializeLogger(this.settings);
         }
@@ -276,13 +271,10 @@ export default class Veil extends Extension {
             this.panelManager = null;
         }
 
-        if (this.veilMenuOpenStateHandlerId !== null && this.indicator) {
+        if (this.indicator) {
             const menu = this.indicator.getButton()
                 .menu as ShellPopupMenu | null;
-            if (menu) {
-                menu.disconnect(this.veilMenuOpenStateHandlerId);
-            }
-            this.veilMenuOpenStateHandlerId = null;
+            menu?.disconnectObject(this);
         }
 
         if (this.indicator) {

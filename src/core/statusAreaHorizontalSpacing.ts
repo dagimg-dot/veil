@@ -13,12 +13,6 @@ const PANEL_BUTTON_CLASS = "panel-button";
 /** Forces Shell to recompute panel-button metrics after inline style changes. */
 const LAYOUT_REFRESH_CLASS = "veil-hspacing-layout-refresh-dummy";
 
-type TrackedButton = {
-    /** Baseline inline style merged after our padding (what we restore on destroy). */
-    baselineStyle: string;
-    styleChangedId: number;
-};
-
 function buildPaddingStyle(paddingPx: number): string {
     let line = `-natural-hpadding: ${paddingPx}px`;
     if (paddingPx < 6) {
@@ -57,9 +51,7 @@ function refreshPanelButtonLayout(button: St.Widget) {
 export class StatusAreaHorizontalSpacing {
     private readonly settings: Gio.Settings;
     private paddingStyle: string;
-    private settingsHandlerId: number | null = null;
-    private childAddedId: number | null = null;
-    private readonly tracked = new Map<St.Widget, TrackedButton>();
+    private readonly tracked = new Map<St.Widget, string>();
 
     constructor(settings: Gio.Settings) {
         this.settings = settings;
@@ -71,14 +63,15 @@ export class StatusAreaHorizontalSpacing {
             this.attachToContainer(child);
         }
 
-        this.childAddedId = MainPanel._rightBox.connect(
+        MainPanel._rightBox.connectObject(
             "child-added",
-            (_box, actor) => {
+            (_box: St.BoxLayout, actor: Clutter.Actor) => {
                 this.attachToContainer(actor);
             },
+            this,
         );
 
-        this.settingsHandlerId = this.settings.connect(
+        this.settings.connectObject(
             `changed::${SETTINGS_KEY}`,
             () => {
                 this.paddingStyle = buildPaddingStyle(
@@ -86,18 +79,13 @@ export class StatusAreaHorizontalSpacing {
                 );
                 this.reapplyAll();
             },
+            this,
         );
     }
 
     destroy() {
-        if (this.settingsHandlerId !== null) {
-            this.settings.disconnect(this.settingsHandlerId);
-            this.settingsHandlerId = null;
-        }
-        if (this.childAddedId !== null) {
-            MainPanel._rightBox.disconnect(this.childAddedId);
-            this.childAddedId = null;
-        }
+        this.settings.disconnectObject(this);
+        MainPanel._rightBox.disconnectObject(this);
         for (const child of MainPanel._rightBox.get_children()) {
             this.detachFromContainer(child);
         }
@@ -123,17 +111,21 @@ export class StatusAreaHorizontalSpacing {
     private wireButton(button: St.Widget, baselineStyle: string) {
         button.set_style(mergeWithBaseline(this.paddingStyle, baselineStyle));
 
-        const styleChangedId = button.connect("style-changed", () => {
-            const current = button.get_style() ?? "";
-            if (current.includes(this.paddingStyle)) {
-                return;
-            }
-            button.disconnect(styleChangedId);
-            this.tracked.delete(button);
-            this.wireButton(button, current);
-        });
+        button.connectObject(
+            "style-changed",
+            () => {
+                const current = button.get_style() ?? "";
+                if (current.includes(this.paddingStyle)) {
+                    return;
+                }
+                button.disconnectObject(this);
+                this.tracked.delete(button);
+                this.wireButton(button, current);
+            },
+            this,
+        );
 
-        this.tracked.set(button, { baselineStyle, styleChangedId });
+        this.tracked.set(button, baselineStyle);
         refreshPanelButtonLayout(button);
     }
 
@@ -142,12 +134,12 @@ export class StatusAreaHorizontalSpacing {
         if (!button) {
             return;
         }
-        const entry = this.tracked.get(button);
-        if (!entry) {
+        const baselineStyle = this.tracked.get(button);
+        if (baselineStyle === undefined) {
             return;
         }
-        button.disconnect(entry.styleChangedId);
-        button.set_style(entry.baselineStyle);
+        button.disconnectObject(this);
+        button.set_style(baselineStyle);
         this.tracked.delete(button);
         refreshPanelButtonLayout(button);
     }

@@ -35,8 +35,6 @@ export class PanelManager {
     private settings: Gio.Settings;
     private veilIndicator: PanelMenu.Button;
     private animationManager: AnimationManager;
-    private addedHandlerId: number | null = null;
-    private removedHandlerId: number | null = null;
     private onItemsChangedCallback?: (items: string[]) => void;
     private stateManager: StateManager;
     private initialSetupComplete = false;
@@ -47,13 +45,10 @@ export class PanelManager {
     private hoverInteractionZone: HoverInteractionZone = "none";
     /** True between button-press and release on a right-box item (avoids spurious leave on click). */
     private pointerDownOnPanelItem = false;
-    /** Per-tray-applet hover/press signals on `actor.firstChild` (enter, leave, press, release). */
-    private itemHoverHandlers: Map<Clutter.Actor, number[]> = new Map();
-    /** `open-state-changed` on each tray `PanelMenu.Button.menu`, keyed by the button actor */
-    private menuOpenStateHandlers: Map<Clutter.Actor, number> = new Map();
-    // Watch for late accessible_name changes
-    private nameChangeHandlers: Map<St.Widget, number> = new Map();
-    private firstChildHandlers: Map<Clutter.Actor, number> = new Map();
+    private connectedApplets: Set<Clutter.Actor> = new Set();
+    private nameWatchedApplets: Set<St.Widget> = new Set();
+    private containersAwaitingChild: Set<Clutter.Actor> = new Set();
+    private readonly nameWatchOwner = {};
     private hiddenByVeil: Set<Clutter.Actor> = new Set();
     /** Pending `idle_add` from tray menu `open-state-changed` (removed in `destroy()`). */
     private menuCloseIdleSourceIds: Set<number> = new Set();
@@ -73,14 +68,12 @@ export class PanelManager {
     }
 
     private setupListeners() {
-        this.addedHandlerId = MainPanel._rightBox.connect(
+        MainPanel._rightBox.connectObject(
             "child-added",
             this._onItemAdded.bind(this),
-        );
-
-        this.removedHandlerId = MainPanel._rightBox.connect(
             "child-removed",
             this._onItemRemoved.bind(this),
+            this,
         );
 
         logger.debug("Panel listeners setup complete");
@@ -98,39 +91,39 @@ export class PanelManager {
     }
 
     private forgetChild(child: Clutter.Actor) {
-        this.itemHoverHandlers.delete(child);
-        this.nameChangeHandlers.delete(child as St.Widget);
-        this.menuOpenStateHandlers.delete(child);
+        this.connectedApplets.delete(child);
+        this.nameWatchedApplets.delete(child as St.Widget);
     }
 
     private detachHoverHandlersFromChild(child: Clutter.Actor) {
-        const ids = this.itemHoverHandlers.get(child);
-        if (!ids) return;
+        if (!this.connectedApplets.delete(child)) return;
 
-        for (const id of ids) {
-            child.disconnect(id);
+        child.disconnectObject(this);
+        if (child instanceof PanelMenu.Button) {
+            child.menu?.disconnectObject(this);
         }
+    }
 
-        this.itemHoverHandlers.delete(child);
+    private stopWatchingName(child: St.Widget) {
+        if (this.nameWatchedApplets.delete(child)) {
+            child.disconnectObject(this.nameWatchOwner);
+        }
     }
 
     private attachHoverHandlers(child: Clutter.Actor) {
         this.detachHoverHandlersFromChild(child);
 
-        const ids: number[] = [];
-
-        ids.push(
-            child.connect("enter-event", () => {
+        child.connectObject(
+            "enter-event",
+            () => {
                 if (readInteractionMode(this.settings) !== "hover") {
                     return Clutter.EVENT_PROPAGATE;
                 }
                 this.setHoverInteractionZone("panel");
                 return Clutter.EVENT_PROPAGATE;
-            }),
-        );
-
-        ids.push(
-            child.connect("leave-event", () => {
+            },
+            "leave-event",
+            () => {
                 if (readInteractionMode(this.settings) !== "hover") {
                     return Clutter.EVENT_PROPAGATE;
                 }
@@ -147,30 +140,25 @@ export class PanelManager {
                 this.setHoverInteractionZone("none");
                 this.onPanelLeaveCallback?.();
                 return Clutter.EVENT_PROPAGATE;
-            }),
-        );
-
-        ids.push(
-            child.connect("button-press-event", () => {
+            },
+            "button-press-event",
+            () => {
                 this.pointerDownOnPanelItem = true;
                 return Clutter.EVENT_PROPAGATE;
-            }),
-        );
-
-        ids.push(
-            child.connect("button-release-event", () => {
+            },
+            "button-release-event",
+            () => {
                 this.pointerDownOnPanelItem = false;
                 return Clutter.EVENT_PROPAGATE;
-            }),
-        );
-
-        ids.push(
-            child.connect("destroy", () => {
+            },
+            "destroy",
+            () => {
                 this.forgetChild(child);
-            }),
+            },
+            this,
         );
 
-        this.itemHoverHandlers.set(child, ids);
+        this.connectedApplets.add(child);
         this.attachMenuOpenStateHandlerIfNeeded(child);
     }
 
@@ -187,23 +175,25 @@ export class PanelManager {
     }
 
     private attachMenuOpenStateHandlerIfNeeded(child: Clutter.Actor) {
-        if (this.menuOpenStateHandlers.has(child)) return;
         if (!(child instanceof PanelMenu.Button)) return;
 
         const menu = child.menu as ShellPopupMenu;
         if (!menu) return;
 
-        const handlerId = menu.connect("open-state-changed", () => {
-            // isOpen is updated before emit; avoids relying on callback arity.
-            if (menu.isOpen) {
+        menu.connectObject(
+            "open-state-changed",
+            () => {
+                // isOpen is updated before emit; avoids relying on callback arity.
+                if (menu.isOpen) {
+                    this.clearPointerDownHoverGuard();
+                    return undefined;
+                }
                 this.clearPointerDownHoverGuard();
+                this.scheduleSyncHoverAfterMenuCloseIdle();
                 return undefined;
-            }
-            this.clearPointerDownHoverGuard();
-            this.scheduleSyncHoverAfterMenuCloseIdle();
-            return undefined;
-        });
-        this.menuOpenStateHandlers.set(child, handlerId);
+            },
+            this,
+        );
     }
 
     /** Cursor still over the top panel or a Shell popup (e.g. tray menu under uiGroup). */
@@ -271,12 +261,16 @@ export class PanelManager {
 
         if (!child) {
             // Container was added before its child widget; defer until child arrives
-            const handlerId = actor.connect("notify::first-child", () => {
-                actor.disconnect(handlerId);
-                this.firstChildHandlers.delete(actor);
-                this.applyNewItemVisibility(actor);
-            });
-            this.firstChildHandlers.set(actor, handlerId);
+            actor.connectObject(
+                "notify::first-child",
+                () => {
+                    actor.disconnectObject(this);
+                    this.containersAwaitingChild.delete(actor);
+                    this.applyNewItemVisibility(actor);
+                },
+                this,
+            );
+            this.containersAwaitingChild.add(actor);
             return;
         }
 
@@ -299,23 +293,26 @@ export class PanelManager {
 
     private watchForNameChange(child: St.Widget, actor: Clutter.Actor) {
         // Skip if we already have a handler for this item
-        if (this.nameChangeHandlers.has(child)) {
+        if (this.nameWatchedApplets.has(child)) {
             return;
         }
 
-        const handlerId = child.connect("notify::accessible-name", () => {
-            // Re-apply visibility now that we have a name
-            const itemName = this.getItemName(child);
-            if (itemName) {
-                this.handleNewItemVisibility(itemName, actor);
-            }
-            // Disconnect after name is set (one-time watcher)
-            child.disconnect(handlerId);
-            this.nameChangeHandlers.delete(child);
-            this.updateAllItemsList();
-            this.onItemsChangedCallback?.(this.getAllItemNames());
-        });
-        this.nameChangeHandlers.set(child, handlerId);
+        child.connectObject(
+            "notify::accessible-name",
+            () => {
+                // Re-apply visibility now that we have a name
+                const itemName = this.getItemName(child);
+                if (itemName) {
+                    this.handleNewItemVisibility(itemName, actor);
+                }
+                // Disconnect after name is set (one-time watcher)
+                this.stopWatchingName(child);
+                this.updateAllItemsList();
+                this.onItemsChangedCallback?.(this.getAllItemNames());
+            },
+            this.nameWatchOwner,
+        );
+        this.nameWatchedApplets.add(child);
     }
 
     private _onItemRemoved(_container: St.BoxLayout, actor: Clutter.Actor) {
@@ -325,28 +322,14 @@ export class PanelManager {
         this.hiddenByVeil.delete(actor);
 
         // Clean up handlers
-        const firstChildHandler = this.firstChildHandlers.get(actor);
-        if (firstChildHandler !== undefined) {
-            actor.disconnect(firstChildHandler);
-            this.firstChildHandlers.delete(actor);
+        if (this.containersAwaitingChild.delete(actor)) {
+            actor.disconnectObject(this);
         }
 
         const child = actor.firstChild;
         if (child) {
             this.detachHoverHandlersFromChild(child);
-
-            const nameHandler = this.nameChangeHandlers.get(child as St.Widget);
-            if (nameHandler !== undefined) {
-                (child as St.Widget).disconnect(nameHandler);
-                this.nameChangeHandlers.delete(child as St.Widget);
-            }
-
-            const menuHandlerId = this.menuOpenStateHandlers.get(child);
-            if (menuHandlerId !== undefined) {
-                const button = child as PanelMenu.Button;
-                if (button.menu) button.menu.disconnect(menuHandlerId);
-                this.menuOpenStateHandlers.delete(child);
-            }
+            this.stopWatchingName(child as St.Widget);
         }
 
         this.updateAllItemsList();
@@ -704,41 +687,22 @@ export class PanelManager {
         this.menuCloseIdleSourceIds.clear();
         this.animationManager.destroy();
 
-        for (const [child, ids] of this.itemHoverHandlers) {
-            for (const id of ids) {
-                child.disconnect(id);
-            }
+        for (const child of [...this.connectedApplets]) {
+            this.detachHoverHandlersFromChild(child);
         }
 
-        this.itemHoverHandlers.clear();
-
-        for (const [child, handlerId] of this.menuOpenStateHandlers) {
-            const button = child as PanelMenu.Button;
-            if (button.menu) button.menu.disconnect(handlerId);
+        for (const child of [...this.nameWatchedApplets]) {
+            this.stopWatchingName(child);
         }
-        this.menuOpenStateHandlers.clear();
 
-        for (const [child, handlerId] of this.nameChangeHandlers) {
-            child.disconnect(handlerId);
+        for (const actor of this.containersAwaitingChild) {
+            actor.disconnectObject(this);
         }
-        this.nameChangeHandlers.clear();
-
-        for (const [actor, handlerId] of this.firstChildHandlers) {
-            actor.disconnect(handlerId);
-        }
-        this.firstChildHandlers.clear();
+        this.containersAwaitingChild.clear();
 
         this.hiddenByVeil.clear();
 
-        if (this.addedHandlerId !== null) {
-            MainPanel._rightBox.disconnect(this.addedHandlerId);
-            this.addedHandlerId = null;
-        }
-
-        if (this.removedHandlerId !== null) {
-            MainPanel._rightBox.disconnect(this.removedHandlerId);
-            this.removedHandlerId = null;
-        }
+        MainPanel._rightBox.disconnectObject(this);
 
         logger.debug("PanelManager destroyed");
     }

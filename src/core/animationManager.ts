@@ -6,7 +6,6 @@ import { logger } from "../utils/logger.js";
 const SLIDE_OFFSET = 30;
 
 interface RunningAnimation {
-    completedId: number;
     timeoutId: number | null;
     resolve: (() => void) | null;
 }
@@ -48,16 +47,16 @@ export class AnimationManager {
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
 
-        const completedId = actor.connect("transitions-completed", () => {
-            this.stop(actor);
-            logger.debug("Slide in completed");
-        });
+        actor.connectObject(
+            "transitions-completed",
+            () => {
+                this.stop(actor);
+                logger.debug("Slide in completed");
+            },
+            this,
+        );
 
-        this.running.set(actor, {
-            completedId,
-            timeoutId: null,
-            resolve: null,
-        });
+        this.running.set(actor, { timeoutId: null, resolve: null });
     }
 
     fadeOut(actor: Clutter.Actor): Promise<void> {
@@ -91,11 +90,16 @@ export class AnimationManager {
                 resolve();
             };
 
-            const animation: RunningAnimation = {
-                completedId: actor.connect("transitions-completed", () => {
+            actor.connectObject(
+                "transitions-completed",
+                () => {
                     logger.debug("Slide out completed, actor hidden");
                     complete();
-                }),
+                },
+                this,
+            );
+
+            const animation: RunningAnimation = {
                 timeoutId: GLib.timeout_add(
                     GLib.PRIORITY_DEFAULT,
                     duration + 100,
@@ -153,7 +157,7 @@ export class AnimationManager {
         if (!animation) return undefined;
 
         this.running.delete(actor);
-        actor.disconnect(animation.completedId);
+        actor.disconnectObject(this);
         if (animation.timeoutId !== null) {
             GLib.Source.remove(animation.timeoutId);
         }

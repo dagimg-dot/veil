@@ -58,6 +58,7 @@ let nextHandlerId = 1;
 
 export class Signals {
     handlers = new Map();
+    owners = new Map();
 
     connect(signal, handler) {
         const id = nextHandlerId++;
@@ -74,6 +75,22 @@ export class Signals {
     emit(signal, ...args) {
         for (const entry of [...this.handlers.values()]) {
             if (entry.signal === signal) entry.handler(this, ...args);
+        }
+    }
+
+    connectObject(...args) {
+        const owner = args.pop();
+        for (let i = 0; i < args.length; i += 2) {
+            this.owners.set(this.connect(args[i], args[i + 1]), owner);
+        }
+    }
+
+    disconnectObject(owner) {
+        for (const [id, idOwner] of [...this.owners]) {
+            if (idOwner === owner) {
+                this.owners.delete(id);
+                this.handlers.delete(id);
+            }
         }
     }
 
@@ -150,8 +167,9 @@ export const panel = {
     statusArea: { quickSettings: new Widget() },
 };
 
-export function addPanelItem(name, { visible = true } = {}) {
+export function addPanelItem(name, { visible = true, menu = null } = {}) {
     const child = new Button();
+    child.menu = menu;
     child.accessible_name = name;
     const container = new Widget();
     container.children = [child];
@@ -188,10 +206,8 @@ export function fakeSettings(values = {}) {
         set_string: write,
         set_strv: (key, value) => write(key, [...value]),
         reset: (key) => store.delete(key),
-        connect: (signal, handler) => signals.connect(signal, handler),
-        disconnect: (id) => signals.disconnect(id),
-        connectObject: (signal, handler) => signals.connect(signal, handler),
-        disconnectObject: () => signals.handlers.clear(),
+        connectObject: (...args) => signals.connectObject(...args),
+        disconnectObject: (owner) => signals.disconnectObject(owner),
         change: write,
         has: (key) => store.has(key),
         peek: (key) => store.get(key),

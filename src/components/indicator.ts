@@ -23,18 +23,18 @@ export class VeilIndicator {
     private onHoverLeaveCallback?: () => void;
     private settings: Gio.Settings;
     private isHovering = false;
-    private readonly indicatorSignalIds: number[] = [];
     private clickGesture: ClickGesture | null = null;
-    private clickGestureSignalId: number | null = null;
 
     constructor(extension: Extension, settings: Gio.Settings) {
         this.extension = extension;
         this.settings = settings;
         this.indicator = new PanelMenu.Button(0, "Veil");
-        this.indicatorSignalIds.push(
-            this.indicator.connect("destroy", () => {
+        this.indicator.connectObject(
+            "destroy",
+            () => {
                 this.indicator = null;
-            }),
+            },
+            this,
         );
         this.setupUI();
         this.setupMenu();
@@ -80,7 +80,7 @@ export class VeilIndicator {
         const gesture = (btn as GesturePanelButton)._clickGesture;
         if (gesture) {
             this.clickGesture = gesture;
-            this.clickGestureSignalId = gesture.connect(
+            gesture.connectObject(
                 "recognize",
                 (action) => {
                     if (action.get_button() === Clutter.BUTTON_PRIMARY) {
@@ -90,38 +90,47 @@ export class VeilIndicator {
                     // the default menu handler from showing on click.
                     return Clutter.EVENT_PROPAGATE;
                 },
+                this,
             );
         }
 
         // Pre-GNOME 50 fallback: handle button-press-event
-        this.indicatorSignalIds.push(
-            btn.connect("button-press-event", (_actor, event) => {
+        btn.connectObject(
+            "button-press-event",
+            (_actor: Clutter.Actor, event: Clutter.Event) => {
                 const button = event.get_button();
 
                 if (button === Clutter.BUTTON_PRIMARY) {
                     onPrimaryClick();
                 }
-            }),
+            },
+            this,
         );
 
         // Add touch support
-        this.indicatorSignalIds.push(
-            btn.connect("touch-event", (_actor, event) => {
+        btn.connectObject(
+            "touch-event",
+            (_actor: Clutter.Actor, event: Clutter.Event) => {
                 const eventType = event.type();
 
                 if (eventType === Clutter.EventType.TOUCH_BEGIN) {
                     onPrimaryClick();
                 }
-            }),
+            },
+            this,
         );
     }
 
     private setupMenu() {
         const settingsItem = new PopupMenu.PopupMenuItem("Settings");
-        settingsItem.connect("activate", () => {
-            logger.debug("Opening Veil preferences");
-            this.extension.openPreferences();
-        });
+        settingsItem.connectObject(
+            "activate",
+            () => {
+                logger.debug("Opening Veil preferences");
+                this.extension.openPreferences();
+            },
+            this,
+        );
 
         const menu = this.panelButton.menu;
         if (menu && "addMenuItem" in menu) {
@@ -192,8 +201,9 @@ export class VeilIndicator {
 
     private setupHoverHandlers() {
         const btn = this.panelButton;
-        this.indicatorSignalIds.push(
-            btn.connect("enter-event", () => {
+        btn.connectObject(
+            "enter-event",
+            () => {
                 const interactionMode = readInteractionMode(this.settings);
 
                 // Only handle hover in Hover mode
@@ -204,11 +214,13 @@ export class VeilIndicator {
                     this.onHoverEnterCallback?.();
                 }
                 return Clutter.EVENT_PROPAGATE;
-            }),
+            },
+            this,
         );
 
-        this.indicatorSignalIds.push(
-            btn.connect("leave-event", () => {
+        btn.connectObject(
+            "leave-event",
+            () => {
                 const interactionMode = readInteractionMode(this.settings);
 
                 // Only handle hover in Hover mode
@@ -217,7 +229,8 @@ export class VeilIndicator {
                     this.onHoverLeaveCallback?.();
                 }
                 return Clutter.EVENT_PROPAGATE;
-            }),
+            },
+            this,
         );
     }
 
@@ -252,17 +265,9 @@ export class VeilIndicator {
     }
 
     destroy() {
-        if (this.clickGesture && this.clickGestureSignalId !== null) {
-            this.clickGesture.disconnect(this.clickGestureSignalId);
-            this.clickGesture = null;
-            this.clickGestureSignalId = null;
-        }
-        if (this.indicator) {
-            for (const id of this.indicatorSignalIds) {
-                this.indicator.disconnect(id);
-            }
-            this.indicatorSignalIds.length = 0;
-        }
+        this.clickGesture?.disconnectObject(this);
+        this.clickGesture = null;
+        this.indicator?.disconnectObject(this);
         if (this.iconWidget && this.indicator) {
             this.indicator.remove_child(this.iconWidget);
             this.iconWidget.destroy();
