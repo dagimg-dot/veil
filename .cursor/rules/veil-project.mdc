@@ -8,8 +8,9 @@ alwaysApply: true
 ## After code changes
 
 - Run `bun run check` (lint + format).
-- Run `bun run check:types` for TypeScript only.
-- Do **not** run build commands; validation is manual in a VM.
+- Run `bun run check:types` (tsc, then rejects any written `any`/`unknown`).
+- Run `bun run test` for unit tests.
+- Do **not** run build commands on the host; `bun test:docker` checks behaviour in a real shell.
 
 ## Layout
 
@@ -33,5 +34,5 @@ alwaysApply: true
 
 ## Constraints
 
-- No automated tests — exercise changes manually in the VM.
+- Unit tests are in `tests/unit`; suites against a real headless shell are in `tests/vm`.
 - `build/` and `dist/` are gitignored; do not treat them as source of truth.
