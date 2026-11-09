@@ -31,6 +31,11 @@ export class VeilIndicator {
         this.extension = extension;
         this.settings = settings;
         this.indicator = new PanelMenu.Button(0, "Veil");
+        this.indicatorSignalIds.push(
+            this.indicator.connect("destroy", () => {
+                this.indicator = null;
+            }),
+        );
         this.setupUI();
         this.setupMenu();
         this.setupClickHandler();
@@ -161,8 +166,9 @@ export class VeilIndicator {
     }
 
     repositionIndicator() {
-        const indicatorButton = this.panelButton;
-        const container = indicatorButton.get_parent();
+        if (!this.indicator) return;
+
+        const container = this.indicator.get_parent();
 
         if (!container) return;
 
