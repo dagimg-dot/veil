@@ -160,6 +160,8 @@ export const indicatorIcon = () => helperCall("indicatorIcon");
 export const markIndicatorIcon = () => helperCall("markIndicatorIcon");
 export const indicatorIconMarked = () => helperCall("indicatorIconMarked");
 export const activateSettingsItem = () => helperCall("activateSettingsItem");
+export const dropWindowFocus = () => helperCall("dropWindowFocus");
+export const focusedWindowClass = () => helperCall("focusedWindowClass");
 
 export const panelItems = () => helperCall("items");
 export const indicatorCenter = () => helperCall("indicatorCenter");

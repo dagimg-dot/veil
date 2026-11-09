@@ -14,9 +14,11 @@ import {
     addEmptyContainer,
     addTrayItem,
     closeWindows,
+    dropWindowFocus,
     ExtensionState,
     extension,
     extensionSettings,
+    focusedWindowClass,
     indicatorCenter,
     indicatorIcon,
     itemCenter,
@@ -136,6 +138,24 @@ test("the indicator's Settings item opens the preferences", () => {
         "preferences closed",
         () => !windowClasses().includes(PREFS_APP_ID),
     );
+});
+
+test("the Settings item raises a preferences window already open", () => {
+    afterAll(() => closeWindows(PREFS_APP_ID));
+    const prefsWindows = () =>
+        windowClasses().filter((name) => name === PREFS_APP_ID);
+    activateSettingsItem();
+    waitFor("preferences window", () => prefsWindows().length > 0, 20000);
+    waitFor("window focused", () => focusedWindowClass() === PREFS_APP_ID);
+    dropWindowFocus();
+    waitFor("focus dropped", () => focusedWindowClass() !== PREFS_APP_ID);
+
+    activateSettingsItem();
+    waitFor("window raised", () => focusedWindowClass() === PREFS_APP_ID);
+    assert.equal(prefsWindows().length, 1, "preferences windows");
+
+    closeWindows(PREFS_APP_ID);
+    waitFor("preferences closed", () => prefsWindows().length === 0);
 });
 
 test("clicking a tray item does not stop leaving from hiding items", () => {

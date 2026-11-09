@@ -15,6 +15,8 @@ import {
 } from "./utils/logger.js";
 import { readInteractionMode } from "./utils/settings.js";
 
+const PREFS_WM_CLASS = "org.gnome.Shell.Extensions";
+
 export default class Veil extends Extension {
     private indicator!: VeilIndicator | null;
     private settings!: Gio.Settings | null;
@@ -133,6 +135,23 @@ export default class Veil extends Extension {
         this.indicator.updateIcon(initiallyRevealed);
 
         logger.info("Veil extension fully initialized");
+    }
+
+    override openPreferences() {
+        const openWindow = global
+            .get_window_actors()
+            .map((actor) => actor.meta_window)
+            .find(
+                (window) =>
+                    window?.get_wm_class() === PREFS_WM_CLASS &&
+                    window.get_title() === this.metadata.name,
+            );
+
+        if (openWindow) {
+            Main.activateWindow(openWindow);
+        } else {
+            super.openPreferences();
+        }
     }
 
     private setupSettingsHandlers(): void {

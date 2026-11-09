@@ -69,6 +69,13 @@ const helper = {
     indicatorIconMarked: () =>
         Main.panel.statusArea.veil.get_first_child() === markedIndicatorIcon,
 
+    dropWindowFocus() {
+        global.display.unset_input_focus(global.get_current_time());
+    },
+
+    focusedWindowClass: () =>
+        global.display.focus_window?.get_wm_class() ?? null,
+
     activateSettingsItem() {
         Main.panel.statusArea.veil.menu._getMenuItems()[0].activate(null);
     },
