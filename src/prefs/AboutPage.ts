@@ -3,7 +3,7 @@ import Gdk from "gi://Gdk";
 import type Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
-import type { ExtensionMetadata } from "@girs/gnome-shell/extensions/extension";
+import type { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 import { Icons } from "../lib/icons.js";
 import { getTemplate } from "../utils/getTemplate.js";
 
@@ -54,7 +54,7 @@ export const AboutPage = GObject.registerClass(
         ],
     },
     class AboutPage extends Adw.PreferencesPage {
-        setMetadata(metadata: ExtensionMetadata) {
+        setMetadata(metadata: ExtensionPreferences["metadata"]) {
             const children = this as unknown as AboutPageChildren;
 
             new Icons(metadata.path);

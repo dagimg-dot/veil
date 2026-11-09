@@ -1,14 +1,16 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
-	"formatter": {
-		"enabled": true,
-		"useEditorconfig": true,
-		"includes": ["**/*.ts", "**/*.js", "**/*.css", "!dist/**"]
-	},
-	"linter": {
-		"enabled": true,
-		"rules": { "recommended": true },
-		"includes": ["**/*.ts", "**/*.js", "**/*.css", "!dist/**"]
-	},
-	"javascript": { "globals": ["imports"] }
+  "$schema": "https://biomejs.dev/schemas/2.6.6/schema.json",
+  "files": {
+    "includes": ["**", "!!**/dist", "!!**/build"]
+  },
+  "formatter": {
+    "enabled": true,
+    "useEditorconfig": true,
+    "includes": ["**/*.ts", "**/*.js", "**/*.css"]
+  },
+  "linter": {
+    "enabled": true,
+    "includes": ["**/*.ts", "**/*.js", "**/*.css"]
+  },
+  "javascript": { "globals": ["imports"] }
 }

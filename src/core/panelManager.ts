@@ -54,7 +54,7 @@ export class PanelManager {
     private menuOpenStateHandlers: Map<Clutter.Actor, number> = new Map();
     // Watch for late accessible_name changes
     private nameChangeHandlers: Map<St.Widget, number> = new Map();
-    private firstChildHandlers: Map<St.Widget, number> = new Map();
+    private firstChildHandlers: Map<Clutter.Actor, number> = new Map();
     /** Pending `idle_add` from tray menu `open-state-changed` (removed in `destroy()`). */
     private menuCloseIdleSourceIds: Set<number> = new Set();
 
@@ -108,7 +108,7 @@ export class PanelManager {
         this.itemHoverHandlers.delete(child);
     }
 
-    private attachHoverHandlers(_actor: St.Widget, child: Clutter.Actor) {
+    private attachHoverHandlers(_actor: Clutter.Actor, child: Clutter.Actor) {
         this.detachHoverHandlersFromChild(child);
 
         const ids: number[] = [];
@@ -232,7 +232,7 @@ export class PanelManager {
         this.onPanelLeaveCallback?.();
     }
 
-    private _onItemAdded(_container: St.Widget, actor: St.Widget) {
+    private _onItemAdded(_container: St.BoxLayout, actor: Clutter.Actor) {
         logger.debug("Panel item added", { actor });
 
         const child = actor.firstChild;
@@ -285,7 +285,7 @@ export class PanelManager {
         return true;
     }
 
-    private applyNewItemVisibility(actor: St.Widget) {
+    private applyNewItemVisibility(actor: Clutter.Actor) {
         const child = actor.firstChild;
 
         if (!child) {
@@ -316,7 +316,7 @@ export class PanelManager {
         this.watchForNameChange(child as St.Widget, actor);
     }
 
-    private watchForNameChange(child: St.Widget, actor: St.Widget) {
+    private watchForNameChange(child: St.Widget, actor: Clutter.Actor) {
         // Skip if we already have a handler for this item
         if (this.nameChangeHandlers.has(child)) {
             return;
@@ -335,7 +335,7 @@ export class PanelManager {
         this.nameChangeHandlers.set(child, handlerId);
     }
 
-    private _onItemRemoved(_container: St.Widget, actor: St.Widget) {
+    private _onItemRemoved(_container: St.BoxLayout, actor: Clutter.Actor) {
         logger.debug("Panel item removed", { actor });
 
         // Clean up handlers
@@ -695,7 +695,10 @@ export class PanelManager {
         });
     }
 
-    private handleNewItemVisibility(itemName: string, container: St.Widget) {
+    private handleNewItemVisibility(
+        itemName: string,
+        container: Clutter.Actor,
+    ) {
         const panelRevealed = this.stateManager.isPanelRevealed();
         const visibleItems = this.settings.get_strv("visible-items");
 
