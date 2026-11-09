@@ -5,28 +5,6 @@ import Gtk from "gi://Gtk";
 import { getTemplate } from "../utils/getTemplate.js";
 import { logger } from "../utils/logger.js";
 
-export interface GeneralPageChildren {
-    _saveState: Adw.ComboRow;
-    _defaultVisibility: Adw.ComboRow;
-    _openIconRow: Adw.ActionRow;
-    _closeIconRow: Adw.ActionRow;
-    _openIconButton: Gtk.Button;
-    _closeIconButton: Gtk.Button;
-    _openIconClearButton: Gtk.Button;
-    _closeIconClearButton: Gtk.Button;
-    _statusAreaHPadding: Adw.SpinRow;
-    _interactionMode: Adw.ComboRow;
-    _autoHideEnabled: Adw.SwitchRow;
-    _autoHideDuration: Adw.SpinRow;
-    _hoverHideOnLeave: Adw.SwitchRow;
-    _hoverDuration: Adw.SpinRow;
-    _animationEnabled: Adw.SwitchRow;
-    _animateAllItems: Adw.SwitchRow;
-    _animationDuration: Adw.SpinRow;
-    _loggingLevel: Adw.ComboRow;
-    _journalctlCommand: Adw.EntryRow;
-}
-
 export const GeneralPage = GObject.registerClass(
     {
         GTypeName: "VeilGeneralPage",
@@ -54,19 +32,38 @@ export const GeneralPage = GObject.registerClass(
         ],
     },
     class GeneralPage extends Adw.PreferencesPage {
+        declare _saveState: Adw.ComboRow;
+        declare _defaultVisibility: Adw.ComboRow;
+        declare _openIconRow: Adw.ActionRow;
+        declare _closeIconRow: Adw.ActionRow;
+        declare _openIconButton: Gtk.Button;
+        declare _closeIconButton: Gtk.Button;
+        declare _openIconClearButton: Gtk.Button;
+        declare _closeIconClearButton: Gtk.Button;
+        declare _statusAreaHPadding: Adw.SpinRow;
+        declare _interactionMode: Adw.ComboRow;
+        declare _autoHideEnabled: Adw.SwitchRow;
+        declare _autoHideDuration: Adw.SpinRow;
+        declare _hoverHideOnLeave: Adw.SwitchRow;
+        declare _hoverDuration: Adw.SpinRow;
+        declare _animationEnabled: Adw.SwitchRow;
+        declare _animateAllItems: Adw.SwitchRow;
+        declare _animationDuration: Adw.SpinRow;
+        declare _loggingLevel: Adw.ComboRow;
+        declare _journalctlCommand: Adw.EntryRow;
+
         private settings!: Gio.Settings;
 
         bindSettings(settings: Gio.Settings) {
             this.settings = settings;
-            const children = this as unknown as GeneralPageChildren;
             logger.debug("Settings bound to GeneralPage");
 
             // Bind save state combo
             const saveState = settings.get_boolean("save-state");
-            children._saveState.set_selected(saveState ? 1 : 0);
+            this._saveState.set_selected(saveState ? 1 : 0);
 
-            children._saveState.connect("notify::selected", () => {
-                const selectedIndex = children._saveState.get_selected();
+            this._saveState.connect("notify::selected", () => {
+                const selectedIndex = this._saveState.get_selected();
                 settings.set_boolean("save-state", selectedIndex === 1);
                 logger.debug("Save state changed", {
                     saveState: selectedIndex === 1,
@@ -76,11 +73,10 @@ export const GeneralPage = GObject.registerClass(
             // Bind default visibility combo
             const defaultVisibility =
                 settings.get_boolean("default-visibility");
-            children._defaultVisibility.set_selected(defaultVisibility ? 0 : 1);
+            this._defaultVisibility.set_selected(defaultVisibility ? 0 : 1);
 
-            children._defaultVisibility.connect("notify::selected", () => {
-                const selectedIndex =
-                    children._defaultVisibility.get_selected();
+            this._defaultVisibility.connect("notify::selected", () => {
+                const selectedIndex = this._defaultVisibility.get_selected();
                 settings.set_boolean("default-visibility", selectedIndex === 0);
                 logger.debug("Default visibility changed", {
                     visible: selectedIndex === 0,
@@ -88,25 +84,25 @@ export const GeneralPage = GObject.registerClass(
             });
 
             this.setupIconChooser(
-                children._openIconButton,
-                children._openIconClearButton,
-                children._openIconRow,
+                this._openIconButton,
+                this._openIconClearButton,
+                this._openIconRow,
                 "custom-open-icon",
                 "Icon shown when items are hidden",
             );
 
             this.setupIconChooser(
-                children._closeIconButton,
-                children._closeIconClearButton,
-                children._closeIconRow,
+                this._closeIconButton,
+                this._closeIconClearButton,
+                this._closeIconRow,
                 "custom-close-icon",
                 "Icon shown when items are visible",
             );
 
             const statusHPadding = settings.get_int("status-area-h-padding");
-            children._statusAreaHPadding.set_value(statusHPadding);
-            children._statusAreaHPadding.connect("notify::value", () => {
-                const value = children._statusAreaHPadding.get_value();
+            this._statusAreaHPadding.set_value(statusHPadding);
+            this._statusAreaHPadding.connect("notify::value", () => {
+                const value = this._statusAreaHPadding.get_value();
                 settings.set_int("status-area-h-padding", value);
                 logger.debug("Status area horizontal padding changed", {
                     value,
@@ -115,29 +111,28 @@ export const GeneralPage = GObject.registerClass(
 
             // Bind interaction mode combo row
             const interactionMode = settings.get_string("interaction-mode");
-            children._interactionMode.set_selected(
+            this._interactionMode.set_selected(
                 interactionMode === "hover" ? 1 : 0,
             );
 
             const updateControlVisibility = () => {
-                const selectedMode = children._interactionMode.get_selected();
+                const selectedMode = this._interactionMode.get_selected();
                 const isClickMode = selectedMode === 0;
 
                 // Show auto-hide controls only in Click mode
-                children._autoHideEnabled.set_visible(isClickMode);
-                children._autoHideDuration.set_visible(isClickMode);
+                this._autoHideEnabled.set_visible(isClickMode);
+                this._autoHideDuration.set_visible(isClickMode);
 
                 // Show hover controls only in Hover mode
-                children._hoverHideOnLeave.set_visible(!isClickMode);
-                const hideOnLeaveEnabled =
-                    children._hoverHideOnLeave.get_active();
-                children._hoverDuration.set_visible(
+                this._hoverHideOnLeave.set_visible(!isClickMode);
+                const hideOnLeaveEnabled = this._hoverHideOnLeave.get_active();
+                this._hoverDuration.set_visible(
                     !isClickMode && !hideOnLeaveEnabled,
                 );
             };
 
-            children._interactionMode.connect("notify::selected", () => {
-                const selectedIndex = children._interactionMode.get_selected();
+            this._interactionMode.connect("notify::selected", () => {
+                const selectedIndex = this._interactionMode.get_selected();
                 const mode = selectedIndex === 1 ? "hover" : "click";
                 settings.set_string("interaction-mode", mode);
                 updateControlVisibility();
@@ -148,10 +143,10 @@ export const GeneralPage = GObject.registerClass(
             const hoverHideOnLeave = settings.get_boolean(
                 "hover-hide-on-leave",
             );
-            children._hoverHideOnLeave.set_active(hoverHideOnLeave);
+            this._hoverHideOnLeave.set_active(hoverHideOnLeave);
 
-            children._hoverHideOnLeave.connect("notify::active", () => {
-                const isActive = children._hoverHideOnLeave.get_active();
+            this._hoverHideOnLeave.connect("notify::active", () => {
+                const isActive = this._hoverHideOnLeave.get_active();
                 settings.set_boolean("hover-hide-on-leave", isActive);
                 updateControlVisibility();
                 logger.debug("Hover hide on leave changed", {
@@ -161,13 +156,13 @@ export const GeneralPage = GObject.registerClass(
 
             // Bind auto-hide enabled switch
             const autoHideEnabled = settings.get_boolean("auto-hide-enabled");
-            children._autoHideEnabled.set_active(autoHideEnabled);
-            children._autoHideDuration.set_sensitive(autoHideEnabled);
+            this._autoHideEnabled.set_active(autoHideEnabled);
+            this._autoHideDuration.set_sensitive(autoHideEnabled);
 
-            children._autoHideEnabled.connect("notify::active", () => {
-                const isActive = children._autoHideEnabled.get_active();
+            this._autoHideEnabled.connect("notify::active", () => {
+                const isActive = this._autoHideEnabled.get_active();
                 settings.set_boolean("auto-hide-enabled", isActive);
-                children._autoHideDuration.set_sensitive(isActive);
+                this._autoHideDuration.set_sensitive(isActive);
                 logger.debug("Auto-hide enabled changed", {
                     enabled: isActive,
                 });
@@ -175,20 +170,20 @@ export const GeneralPage = GObject.registerClass(
 
             // Bind auto-hide duration spin row
             const autoHideDuration = settings.get_int("auto-hide-duration");
-            children._autoHideDuration.set_value(autoHideDuration);
+            this._autoHideDuration.set_value(autoHideDuration);
 
-            children._autoHideDuration.connect("notify::value", () => {
-                const value = children._autoHideDuration.get_value();
+            this._autoHideDuration.connect("notify::value", () => {
+                const value = this._autoHideDuration.get_value();
                 settings.set_int("auto-hide-duration", value);
                 logger.debug("Auto-hide duration changed", { duration: value });
             });
 
             // Bind hover duration spin row
             const hoverDuration = settings.get_int("hover-duration");
-            children._hoverDuration.set_value(hoverDuration);
+            this._hoverDuration.set_value(hoverDuration);
 
-            children._hoverDuration.connect("notify::value", () => {
-                const value = children._hoverDuration.get_value();
+            this._hoverDuration.connect("notify::value", () => {
+                const value = this._hoverDuration.get_value();
                 settings.set_int("hover-duration", value);
                 logger.debug("Hover duration changed", { duration: value });
             });
@@ -198,22 +193,22 @@ export const GeneralPage = GObject.registerClass(
 
             // Bind animation enabled switch
             const animationEnabled = settings.get_boolean("animation-enabled");
-            children._animationEnabled.set_active(animationEnabled);
-            children._animationDuration.set_sensitive(animationEnabled);
-            children._animateAllItems.set_sensitive(animationEnabled);
+            this._animationEnabled.set_active(animationEnabled);
+            this._animationDuration.set_sensitive(animationEnabled);
+            this._animateAllItems.set_sensitive(animationEnabled);
             // If animations disabled, ensure animateAllItems is also disabled
-            if (!animationEnabled && children._animateAllItems.get_active()) {
-                children._animateAllItems.set_active(false);
+            if (!animationEnabled && this._animateAllItems.get_active()) {
+                this._animateAllItems.set_active(false);
                 settings.set_boolean("animate-all-items", false);
             }
 
-            children._animationEnabled.connect("notify::active", () => {
-                const isActive = children._animationEnabled.get_active();
+            this._animationEnabled.connect("notify::active", () => {
+                const isActive = this._animationEnabled.get_active();
                 settings.set_boolean("animation-enabled", isActive);
-                children._animationDuration.set_sensitive(isActive);
-                children._animateAllItems.set_sensitive(isActive);
-                if (!isActive && children._animateAllItems.get_active()) {
-                    children._animateAllItems.set_active(false);
+                this._animationDuration.set_sensitive(isActive);
+                this._animateAllItems.set_sensitive(isActive);
+                if (!isActive && this._animateAllItems.get_active()) {
+                    this._animateAllItems.set_active(false);
                     settings.set_boolean("animate-all-items", false);
                 }
                 logger.debug("Animation enabled changed", {
@@ -223,20 +218,20 @@ export const GeneralPage = GObject.registerClass(
 
             // Bind animation duration spin row
             const animationDuration = settings.get_int("animation-duration");
-            children._animationDuration.set_value(animationDuration);
+            this._animationDuration.set_value(animationDuration);
 
-            children._animationDuration.connect("notify::value", () => {
-                const value = children._animationDuration.get_value();
+            this._animationDuration.connect("notify::value", () => {
+                const value = this._animationDuration.get_value();
                 settings.set_int("animation-duration", value);
                 logger.debug("Animation duration changed", { duration: value });
             });
 
             // Bind animate all items switch
             const animateAllItems = settings.get_boolean("animate-all-items");
-            children._animateAllItems.set_active(animateAllItems);
+            this._animateAllItems.set_active(animateAllItems);
 
-            children._animateAllItems.connect("notify::active", () => {
-                const isActive = children._animateAllItems.get_active();
+            this._animateAllItems.connect("notify::active", () => {
+                const isActive = this._animateAllItems.get_active();
                 settings.set_boolean("animate-all-items", isActive);
                 logger.debug("Animate all items changed", {
                     enabled: isActive,
@@ -247,12 +242,12 @@ export const GeneralPage = GObject.registerClass(
             const loggingLevels = ["error", "warn", "info", "debug"];
             const currentLevel = settings.get_string("logging-level");
             const currentIndex = loggingLevels.indexOf(currentLevel);
-            children._loggingLevel.set_selected(
+            this._loggingLevel.set_selected(
                 currentIndex >= 0 ? currentIndex : 2,
             ); // default to "info"
 
-            children._loggingLevel.connect("notify::selected", () => {
-                const selectedIndex = children._loggingLevel.get_selected();
+            this._loggingLevel.connect("notify::selected", () => {
+                const selectedIndex = this._loggingLevel.get_selected();
                 if (
                     selectedIndex >= 0 &&
                     selectedIndex < loggingLevels.length

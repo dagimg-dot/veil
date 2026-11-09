@@ -29,16 +29,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`;
 
-export interface AboutPageChildren {
-    _extensionIcon: Gtk.Image;
-    _extensionName: Gtk.Label;
-    _extensionVersion: Gtk.Label;
-    _linkWebsite: Gtk.Button;
-    _linkIssues: Gtk.Button;
-    _legalRow: Adw.ExpanderRow;
-    _extensionLicense: Gtk.TextView;
-}
-
 export const AboutPage = GObject.registerClass(
     {
         GTypeName: "VeilAboutPage",
@@ -54,25 +44,31 @@ export const AboutPage = GObject.registerClass(
         ],
     },
     class AboutPage extends Adw.PreferencesPage {
-        setMetadata(metadata: ExtensionPreferences["metadata"]) {
-            const children = this as unknown as AboutPageChildren;
+        declare _extensionIcon: Gtk.Image;
+        declare _extensionName: Gtk.Label;
+        declare _extensionVersion: Gtk.Label;
+        declare _linkWebsite: Gtk.Button;
+        declare _linkIssues: Gtk.Button;
+        declare _legalRow: Adw.ExpanderRow;
+        declare _extensionLicense: Gtk.TextView;
 
+        setMetadata(metadata: ExtensionPreferences["metadata"]) {
             new Icons(metadata.path);
 
             const veilIcon = Icons.get("arrow-close") as Gio.Icon;
 
-            children._extensionIcon.set_from_gicon(veilIcon);
+            this._extensionIcon.set_from_gicon(veilIcon);
 
-            children._extensionName.set_text(metadata.name);
-            children._extensionVersion.set_text(
+            this._extensionName.set_text(metadata.name);
+            this._extensionVersion.set_text(
                 `v${metadata["version-name"] || metadata.version}${__VICINAE_ENV_SUFFIX__ ?? ""}`,
             );
 
             if (metadata.url) {
-                children._linkWebsite.connect("clicked", () => {
+                this._linkWebsite.connect("clicked", () => {
                     Gtk.show_uri(null, metadata.url || "", Gdk.CURRENT_TIME);
                 });
-                children._linkIssues.connect("clicked", () => {
+                this._linkIssues.connect("clicked", () => {
                     Gtk.show_uri(
                         null,
                         `${metadata.url}/issues`,
@@ -80,11 +76,11 @@ export const AboutPage = GObject.registerClass(
                     );
                 });
             } else {
-                children._linkWebsite.visible = false;
-                children._linkIssues.visible = false;
+                this._linkWebsite.visible = false;
+                this._linkIssues.visible = false;
             }
 
-            children._extensionLicense.buffer.set_text(LICENSE, -1);
+            this._extensionLicense.buffer.set_text(LICENSE, -1);
         }
     },
 );

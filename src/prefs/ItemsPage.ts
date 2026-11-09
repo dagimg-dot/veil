@@ -5,11 +5,6 @@ import type Gtk from "gi://Gtk";
 import { getTemplate } from "../utils/getTemplate.js";
 import { logger } from "../utils/logger.js";
 
-export interface ItemsPageChildren {
-    _itemsGroup: Adw.PreferencesGroup;
-    _resetButton: Gtk.Button;
-}
-
 export const ItemsPage = GObject.registerClass(
     {
         GTypeName: "VeilItemsPage",
@@ -17,6 +12,9 @@ export const ItemsPage = GObject.registerClass(
         InternalChildren: ["itemsGroup", "resetButton"],
     },
     class ItemsPage extends Adw.PreferencesPage {
+        declare _itemsGroup: Adw.PreferencesGroup;
+        declare _resetButton: Gtk.Button;
+
         private settings!: Gio.Settings;
         private itemRows: Map<string, Adw.SwitchRow> = new Map();
         private handlerIds: Map<string, number> = new Map();
@@ -24,10 +22,9 @@ export const ItemsPage = GObject.registerClass(
 
         bindSettings(settings: Gio.Settings) {
             this.settings = settings;
-            const children = this as unknown as ItemsPageChildren;
             logger.debug("Settings bound to ItemsPage");
 
-            children._resetButton.connect("clicked", () => {
+            this._resetButton.connect("clicked", () => {
                 this.handleReset();
             });
 
@@ -45,7 +42,6 @@ export const ItemsPage = GObject.registerClass(
         }
 
         private updateItemsList() {
-            const children = this as unknown as ItemsPageChildren;
             const allItems = this.settings.get_strv("all-items");
             const visibleItems = this.settings.get_strv("visible-items");
 
@@ -64,7 +60,7 @@ export const ItemsPage = GObject.registerClass(
                         this.handlerIds.delete(itemName);
                     }
 
-                    children._itemsGroup.remove(row);
+                    this._itemsGroup.remove(row);
 
                     this.itemRows.delete(itemName);
                 }
@@ -76,7 +72,7 @@ export const ItemsPage = GObject.registerClass(
 
                 if (!row) {
                     row = this.createItemRow(itemName);
-                    children._itemsGroup.add(row);
+                    this._itemsGroup.add(row);
                     this.itemRows.set(itemName, row);
                 }
 
