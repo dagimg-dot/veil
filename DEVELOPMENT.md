@@ -219,10 +219,10 @@ The checkout is copied into the container rather than mounted, so `DOCKER_HOST=s
 
 | Path | Contents |
 | --- | --- |
-| `tests/vm/suites/*.js` | One file per area (`lifecycle`, `prefs`, `tray`); every file here is picked up automatically |
+| `tests/vm/suites/*.js` | One file per area (`auto-hide`, `hover`, `lifecycle`, `prefs`, `prefs-pages`, `tray`); every file here is picked up automatically |
 | `tests/vm/lib/harness.js` | `test`, `todo` (known gaps that don't fail the run), `skip`, `afterAll`, `allowLogged` (expected extension errors), `assert`, `waitFor`, `sleep` |
 | `tests/vm/lib/shell.js` | Extension state and preferences over D-Bus, the extension's `Gio.Settings`, `evalInShell`, and fake tray items through the helper |
-| `tests/vm/lib/pointer.js` | `clickAt(x, y)` and `pointAt(x, y)` through Mutter's RemoteDesktop API |
+| `tests/vm/lib/pointer.js` | `clickAt(x, y)`, `pointAt(x, y)` and `pointBy(dx, dy)` through Mutter's RemoteDesktop API |
 | `tests/vm/helper/` | The test-only extension: turns on unsafe mode for `org.gnome.Shell.Eval` and adds and inspects fake tray items |
 | `tests/vm/runner.js` | Waits for the extension, runs the suites, and fails a suite if the extension logs errors while it runs |
 | `tests/vm/run.sh`, `tests/vm/session.sh` | Build, isolate and start the headless shell (target side) |
