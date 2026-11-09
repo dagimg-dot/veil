@@ -21,6 +21,7 @@ function center(actor) {
 }
 
 const emptyContainers = new Map();
+let markedIndicatorIcon = null;
 
 const helper = {
     items: () => Main.panel._rightBox.get_children().map(describe),
@@ -60,6 +61,13 @@ const helper = {
 
     indicatorIcon: () =>
         Main.panel.statusArea.veil.get_first_child()?.gicon?.to_string() ?? "",
+
+    markIndicatorIcon() {
+        markedIndicatorIcon = Main.panel.statusArea.veil.get_first_child();
+    },
+
+    indicatorIconMarked: () =>
+        Main.panel.statusArea.veil.get_first_child() === markedIndicatorIcon,
 
     activateSettingsItem() {
         Main.panel.statusArea.veil.menu._getMenuItems()[0].activate(null);

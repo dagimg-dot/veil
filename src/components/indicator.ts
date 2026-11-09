@@ -135,23 +135,22 @@ export class VeilIndicator {
     }
 
     updateIcon(isVisible: boolean) {
-        if (this.iconWidget) {
-            this.panelButton.remove_child(this.iconWidget);
-            this.iconWidget = null;
-        }
-
         const iconName = isVisible ? "arrow-close" : "arrow-open";
         const veilIcon = Icons.get(iconName);
 
-        if (veilIcon) {
+        if (!veilIcon) return;
+
+        if (this.iconWidget) {
+            this.iconWidget.gicon = veilIcon;
+        } else {
             this.iconWidget = new St.Icon({
                 gicon: veilIcon,
                 style_class: "system-status-icon",
             });
-
             this.panelButton.add_child(this.iconWidget);
-            logger.debug("Icon updated", { iconName, isVisible });
         }
+
+        logger.debug("Icon updated", { iconName, isVisible });
     }
 
     private quickSettingsIndex(): number {

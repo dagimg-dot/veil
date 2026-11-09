@@ -6,7 +6,10 @@ import {
     extension,
     extensionSettings,
     fadeOutTimeouts,
+    indicatorIcon,
+    indicatorIconMarked,
     indicatorMenuOpen,
+    markIndicatorIcon,
     setTrayRevealed,
     toggleTray,
     trayRevealed,
@@ -84,6 +87,15 @@ test("an item hidden before Veil starts stays hidden on expand", () => {
     sleep(200);
     assert.ok(!item.state().visible, "Veil revealed a self-hidden item");
     item.setVisible(true);
+});
+
+test("toggling swaps the picture on a single indicator icon", () => {
+    setTrayRevealed(true);
+    markIndicatorIcon();
+    const before = indicatorIcon();
+    setTrayRevealed(false);
+    waitFor("the icon to change", () => indicatorIcon() !== before);
+    assert.ok(indicatorIconMarked(), "the indicator icon was replaced");
 });
 
 test("an animated collapse and expand ends fully visible", () => {
