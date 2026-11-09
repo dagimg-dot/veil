@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { AnimationManager } from "../../src/core/animationManager.ts";
-import { fakeSettings, runSources, sources, Widget } from "./fakes.js";
+import { desktop, fakeSettings, runSources, sources, Widget } from "./fakes.js";
 
 let manager;
 let actor;
@@ -89,6 +89,35 @@ describe("fadeOut", () => {
     test("hides an unmapped actor without animating or waiting", async () => {
         actor.onStage = false;
 
+        await manager.fadeOut(actor);
+
+        expect(actor.visible).toBe(false);
+        expect(actor.transitions.size).toBe(0);
+        expect(sources.size).toBe(0);
+    });
+});
+
+describe("with desktop animations off", () => {
+    beforeEach(() => {
+        desktop.animations = false;
+    });
+
+    afterEach(() => {
+        desktop.animations = true;
+    });
+
+    test("fadeIn shows the actor at once", () => {
+        actor.visible = false;
+        actor.opacity = 0;
+
+        manager.fadeIn(actor);
+
+        expect(actor.visible).toBe(true);
+        expect(actor.opacity).toBe(255);
+        expect(actor.transitions.size).toBe(0);
+    });
+
+    test("fadeOut hides the actor at once", async () => {
         await manager.fadeOut(actor);
 
         expect(actor.visible).toBe(false);

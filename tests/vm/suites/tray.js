@@ -17,6 +17,9 @@ import {
 } from "../lib/shell.js";
 
 const settings = extensionSettings();
+const desktopInterface = new Gio.Settings({
+    schema_id: "org.gnome.desktop.interface",
+});
 
 settings.set_boolean("animation-enabled", false);
 settings.set_string("interaction-mode", "click");
@@ -33,6 +36,7 @@ afterAll(() => {
         "visible-items",
     ])
         settings.reset(key);
+    desktopInterface.reset("enable-animations");
 });
 
 test("clicking the indicator toggles the tray without opening its menu", () => {
@@ -96,6 +100,29 @@ test("toggling swaps the picture on a single indicator icon", () => {
     setTrayRevealed(false);
     waitFor("the icon to change", () => indicatorIcon() !== before);
     assert.ok(indicatorIconMarked(), "the indicator icon was replaced");
+});
+
+test("items skip the fade while desktop animations are off", () => {
+    desktopInterface.set_boolean("enable-animations", false);
+    settings.set_boolean("animation-enabled", true);
+    settings.set_int("animation-duration", 1000);
+    Gio.Settings.sync();
+    sleep(200);
+    setTrayRevealed(true);
+    const item = addTrayItem("tray-desktop-animations");
+    waitForItemVisible(item, true);
+
+    toggleTray();
+    waitFor("the item hidden at once", () => !item.state().visible, 600);
+    toggleTray();
+    waitFor(
+        "the item shown at once",
+        () => item.state().visible && item.state().opacity === 255,
+        600,
+    );
+
+    desktopInterface.reset("enable-animations");
+    Gio.Settings.sync();
 });
 
 test("an animated collapse and expand ends fully visible", () => {

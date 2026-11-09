@@ -24,6 +24,10 @@ export const GLib = {
     Source: { remove: (id) => sources.delete(id) },
 };
 
+export const desktop = { animations: true };
+
+export const adjustAnimationTime = (ms) => (desktop.animations ? ms : 0);
+
 class PropertyTransition {
     constructor({ property_name }) {
         this.property_name = property_name;

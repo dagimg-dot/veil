@@ -1,6 +1,7 @@
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
+import { adjustAnimationTime } from "resource:///org/gnome/shell/misc/animationUtils.js";
 import { logger } from "../utils/logger.js";
 
 const SLIDE_OFFSET = 30;
@@ -23,12 +24,12 @@ export class AnimationManager {
 
         actor.visible = true;
 
-        if (!actor.is_mapped()) {
+        const duration = this.animationDuration();
+
+        if (!actor.is_mapped() || duration === 0) {
             this.resetPresentation(actor);
             return;
         }
-
-        const duration = this.settings.get_int("animation-duration");
 
         actor.opacity = 0;
         actor.set_translation(SLIDE_OFFSET, 0, 0);
@@ -62,13 +63,13 @@ export class AnimationManager {
         return new Promise((resolve) => {
             this.cancelAnimation(actor);
 
-            if (!actor.is_mapped()) {
+            const duration = this.animationDuration();
+
+            if (!actor.is_mapped() || duration === 0) {
                 this.hide(actor);
                 resolve();
                 return;
             }
-
-            const duration = this.settings.get_int("animation-duration");
 
             this.addTransition(actor, "veil-slide-out", "translation-x", {
                 from: 0,
@@ -127,6 +128,10 @@ export class AnimationManager {
         }
 
         logger.debug("AnimationManager destroyed");
+    }
+
+    private animationDuration(): number {
+        return adjustAnimationTime(this.settings.get_int("animation-duration"));
     }
 
     private addTransition(

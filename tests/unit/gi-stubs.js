@@ -1,5 +1,12 @@
 import { plugin } from "bun";
-import { Button, Clutter, GLib, panel, St } from "./fakes.js";
+import {
+    adjustAnimationTime,
+    Button,
+    Clutter,
+    GLib,
+    panel,
+    St,
+} from "./fakes.js";
 
 const stubs = {
     "gi://GLib": { default: GLib },
@@ -11,6 +18,9 @@ const stubs = {
         },
     },
     "resource:///org/gnome/shell/ui/panelMenu.js": { Button },
+    "resource:///org/gnome/shell/misc/animationUtils.js": {
+        adjustAnimationTime,
+    },
 };
 
 plugin({
