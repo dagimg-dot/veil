@@ -1,185 +1,173 @@
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
-import type St from "gi://St";
 import { logger } from "../utils/logger.js";
+
+const SLIDE_OFFSET = 30;
+
+interface RunningAnimation {
+    completedId: number;
+    timeoutId: number | null;
+    resolve: (() => void) | null;
+}
 
 export class AnimationManager {
     private settings: Gio.Settings;
-    private activeAnimations: Map<St.Widget, number> = new Map();
-    private timeoutIds: Map<St.Widget, number> = new Map();
+    private running: Map<Clutter.Actor, RunningAnimation> = new Map();
 
     constructor(settings: Gio.Settings) {
         this.settings = settings;
     }
 
-    fadeIn(actor: St.Widget): void {
-        // Cancel any ongoing animation
+    fadeIn(actor: Clutter.Actor): void {
         this.cancelAnimation(actor);
 
-        // Make visible immediately
         actor.visible = true;
 
+        if (!actor.is_mapped()) {
+            this.resetPresentation(actor);
+            return;
+        }
+
         const duration = this.settings.get_int("animation-duration");
-        const slideOffset = 30; // pixels to slide from
 
         // Set start state - slide from right and fade in
         actor.opacity = 0;
-        actor.set_translation(slideOffset, 0, 0);
+        actor.set_translation(SLIDE_OFFSET, 0, 0);
 
-        // Create translation-x transition (slide in from right)
-        const translationTransition = new Clutter.PropertyTransition({
-            property_name: "translation-x",
+        this.addTransition(actor, "veil-slide-in", "translation-x", {
+            from: SLIDE_OFFSET,
+            to: 0,
+            duration,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
+        this.addTransition(actor, "veil-fade-in", "opacity", {
+            from: 0,
+            to: 255,
+            duration,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
 
-        translationTransition.set_from(slideOffset);
-        translationTransition.set_to(0);
-        translationTransition.set_duration(duration);
-        translationTransition.set_progress_mode(
-            Clutter.AnimationMode.EASE_OUT_QUAD,
-        );
-
-        // Create opacity transition (fade in)
-        const opacityTransition = new Clutter.PropertyTransition({
-            property_name: "opacity",
-        });
-
-        opacityTransition.set_from(0);
-        opacityTransition.set_to(255);
-        opacityTransition.set_duration(duration);
-        opacityTransition.set_progress_mode(
-            Clutter.AnimationMode.EASE_OUT_QUAD,
-        );
-
-        actor.add_transition("veil-slide-in", translationTransition);
-        actor.add_transition("veil-fade-in", opacityTransition);
-
-        // Track the animation
-        this.activeAnimations.set(actor, Date.now());
-
-        // Listen for completion
-        const handlerId = actor.connect("transitions-completed", () => {
-            actor.disconnect(handlerId);
-            this.activeAnimations.delete(actor);
+        const completedId = actor.connect("transitions-completed", () => {
+            this.stop(actor);
             logger.debug("Slide in completed");
         });
-    }
 
-    fadeOut(actor: St.Widget): Promise<void> {
-        return new Promise((resolve) => {
-            // Cancel any ongoing animation
-            this.cancelAnimation(actor);
-
-            const duration = this.settings.get_int("animation-duration");
-            const slideOffset = 30; // pixels to slide to
-
-            // Create translation-x transition (slide out to right)
-            const translationTransition = new Clutter.PropertyTransition({
-                property_name: "translation-x",
-            });
-
-            translationTransition.set_from(0);
-            translationTransition.set_to(slideOffset);
-            translationTransition.set_duration(duration);
-            translationTransition.set_progress_mode(
-                Clutter.AnimationMode.EASE_IN_QUAD,
-            );
-
-            // Create opacity transition (fade out)
-            const opacityTransition = new Clutter.PropertyTransition({
-                property_name: "opacity",
-            });
-
-            opacityTransition.set_from(actor.opacity);
-            opacityTransition.set_to(0);
-            opacityTransition.set_duration(duration);
-            opacityTransition.set_progress_mode(
-                Clutter.AnimationMode.EASE_IN_QUAD,
-            );
-
-            actor.add_transition("veil-slide-out", translationTransition);
-
-            actor.add_transition("veil-fade-out", opacityTransition);
-
-            // Track the animation
-            this.activeAnimations.set(actor, Date.now());
-
-            // Listen for completion to hide the actor and resolve promise
-            const handlerId = actor.connect("transitions-completed", () => {
-                actor.disconnect(handlerId);
-
-                // Cancel the fallback timeout since transition completed successfully
-                const timeoutId = this.timeoutIds.get(actor);
-                if (timeoutId !== undefined) {
-                    GLib.Source.remove(timeoutId);
-                    this.timeoutIds.delete(actor);
-                }
-
-                actor.visible = false;
-                actor.opacity = 255;
-                actor.set_translation(0, 0, 0);
-                this.activeAnimations.delete(actor);
-                logger.debug("Slide out completed, actor hidden");
-                resolve();
-            });
-
-            // Fallback timeout in case signal doesn't fire
-            // Cancel any existing timeout for this actor
-            const existingTimeoutId = this.timeoutIds.get(actor);
-            if (existingTimeoutId !== undefined) {
-                GLib.Source.remove(existingTimeoutId);
-            }
-
-            const timeoutId = GLib.timeout_add(
-                GLib.PRIORITY_DEFAULT,
-                duration + 100,
-                () => {
-                    if (this.activeAnimations.has(actor)) {
-                        logger.warn("Slide out timeout - forcing completion");
-                        actor.visible = false;
-                        actor.opacity = 255;
-                        actor.set_translation(0, 0, 0);
-                        this.activeAnimations.delete(actor);
-                        this.timeoutIds.delete(actor);
-                        resolve();
-                    }
-                    return GLib.SOURCE_REMOVE;
-                },
-            );
-
-            this.timeoutIds.set(actor, timeoutId);
+        this.running.set(actor, {
+            completedId,
+            timeoutId: null,
+            resolve: null,
         });
     }
 
-    cancelAnimation(actor: St.Widget): void {
-        if (this.activeAnimations.has(actor)) {
-            actor.remove_all_transitions();
+    fadeOut(actor: Clutter.Actor): Promise<void> {
+        return new Promise((resolve) => {
+            this.cancelAnimation(actor);
 
-            // Cancel any pending timeout
-            const timeoutId = this.timeoutIds.get(actor);
-            if (timeoutId !== undefined) {
-                GLib.Source.remove(timeoutId);
-                this.timeoutIds.delete(actor);
+            if (!actor.is_mapped()) {
+                this.hide(actor);
+                resolve();
+                return;
             }
 
-            this.activeAnimations.delete(actor);
-        }
+            const duration = this.settings.get_int("animation-duration");
+
+            this.addTransition(actor, "veil-slide-out", "translation-x", {
+                from: 0,
+                to: SLIDE_OFFSET,
+                duration,
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            });
+            this.addTransition(actor, "veil-fade-out", "opacity", {
+                from: actor.opacity,
+                to: 0,
+                duration,
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            });
+
+            const complete = () => {
+                this.stop(actor);
+                this.hide(actor);
+                resolve();
+            };
+
+            const animation: RunningAnimation = {
+                completedId: actor.connect("transitions-completed", () => {
+                    logger.debug("Slide out completed, actor hidden");
+                    complete();
+                }),
+                timeoutId: GLib.timeout_add(
+                    GLib.PRIORITY_DEFAULT,
+                    duration + 100,
+                    () => {
+                        animation.timeoutId = null;
+                        logger.warn("Slide out timeout - forcing completion");
+                        complete();
+                        return GLib.SOURCE_REMOVE;
+                    },
+                ),
+                resolve,
+            };
+
+            this.running.set(actor, animation);
+        });
+    }
+
+    cancelAnimation(actor: Clutter.Actor): void {
+        this.stop(actor)?.resolve?.();
     }
 
     destroy(): void {
-        // Cancel all active animations
-        for (const actor of this.activeAnimations.keys()) {
-            this.cancelAnimation(actor);
+        for (const actor of [...this.running.keys()]) {
+            this.stop(actor);
+            this.resetPresentation(actor);
         }
-
-        // Clean up any remaining timeouts
-        for (const timeoutId of this.timeoutIds.values()) {
-            GLib.Source.remove(timeoutId);
-        }
-
-        this.activeAnimations.clear();
-        this.timeoutIds.clear();
 
         logger.debug("AnimationManager destroyed");
+    }
+
+    private addTransition(
+        actor: Clutter.Actor,
+        name: string,
+        property: string,
+        options: {
+            from: number;
+            to: number;
+            duration: number;
+            mode: Clutter.AnimationMode;
+        },
+    ) {
+        const transition = new Clutter.PropertyTransition({
+            property_name: property,
+        });
+        transition.set_from(options.from);
+        transition.set_to(options.to);
+        transition.set_duration(options.duration);
+        transition.set_progress_mode(options.mode);
+        transition.set_remove_on_complete(true);
+        actor.add_transition(name, transition);
+    }
+
+    private stop(actor: Clutter.Actor): RunningAnimation | undefined {
+        const animation = this.running.get(actor);
+        if (!animation) return undefined;
+
+        this.running.delete(actor);
+        actor.disconnect(animation.completedId);
+        if (animation.timeoutId !== null) {
+            GLib.Source.remove(animation.timeoutId);
+        }
+        actor.remove_all_transitions();
+        return animation;
+    }
+
+    private hide(actor: Clutter.Actor) {
+        actor.visible = false;
+        this.resetPresentation(actor);
+    }
+
+    private resetPresentation(actor: Clutter.Actor) {
+        actor.opacity = 255;
+        actor.set_translation(0, 0, 0);
     }
 }
