@@ -1,0 +1,6 @@
+{
+  "name": "Veil test helper",
+  "description": "Installed only by the VM test suites.",
+  "uuid": "veil-test-helper@dagimg-dot",
+  "shell-version": ["46", "47", "48", "49", "50", "51"]
+}
