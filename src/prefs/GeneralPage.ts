@@ -1,10 +1,14 @@
 import Adw from "gi://Adw";
+import Gdk from "gi://Gdk";
 import type Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
 import { getTemplate } from "../utils/getTemplate.js";
 import { logger } from "../utils/logger.js";
 import { readInteractionMode } from "../utils/settings.js";
+
+const LOGS_COMMAND = 'journalctl --user -n 50 -g "Veil"';
 
 export const GeneralPage = GObject.registerClass(
     {
@@ -29,7 +33,8 @@ export const GeneralPage = GObject.registerClass(
             "animateAllItems",
             "animationDuration",
             "loggingLevel",
-            "journalctlCommand",
+            "journalctlRow",
+            "copyLogsCommandButton",
         ],
     },
     class GeneralPage extends Adw.PreferencesPage {
@@ -51,7 +56,8 @@ export const GeneralPage = GObject.registerClass(
         declare _animateAllItems: Adw.SwitchRow;
         declare _animationDuration: Adw.SpinRow;
         declare _loggingLevel: Adw.ComboRow;
-        declare _journalctlCommand: Adw.EntryRow;
+        declare _journalctlRow: Adw.ActionRow;
+        declare _copyLogsCommandButton: Gtk.Button;
 
         private settings!: Gio.Settings;
 
@@ -253,6 +259,34 @@ export const GeneralPage = GObject.registerClass(
                     settings.set_string("logging-level", level);
                 }
             });
+
+            this.bindCopyLogsCommand();
+        }
+
+        private bindCopyLogsCommand() {
+            const button = this._copyLogsCommandButton;
+            let resetIconId = 0;
+            const cancelReset = () => {
+                if (resetIconId) GLib.source_remove(resetIconId);
+                resetIconId = 0;
+            };
+
+            button.connect("clicked", () => {
+                Gdk.Display.get_default()?.get_clipboard()?.set(LOGS_COMMAND);
+                button.set_icon_name("object-select-symbolic");
+
+                cancelReset();
+                resetIconId = GLib.timeout_add(
+                    GLib.PRIORITY_DEFAULT,
+                    1500,
+                    () => {
+                        resetIconId = 0;
+                        button.set_icon_name("edit-copy-symbolic");
+                        return GLib.SOURCE_REMOVE;
+                    },
+                );
+            });
+            this.connect("destroy", cancelReset);
         }
 
         private setupIconChooser(
