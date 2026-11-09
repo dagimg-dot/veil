@@ -247,15 +247,9 @@ export const GeneralPage = GObject.registerClass(
             ); // default to "info"
 
             this._loggingLevel.connect("notify::selected", () => {
-                const selectedIndex = this._loggingLevel.get_selected();
-                if (
-                    selectedIndex >= 0 &&
-                    selectedIndex < loggingLevels.length
-                ) {
-                    settings.set_string(
-                        "logging-level",
-                        loggingLevels[selectedIndex],
-                    );
+                const level = loggingLevels[this._loggingLevel.get_selected()];
+                if (level !== undefined) {
+                    settings.set_string("logging-level", level);
                 }
             });
         }

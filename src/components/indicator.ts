@@ -137,20 +137,19 @@ export class VeilIndicator {
         }
     }
 
+    private quickSettingsIndex(): number {
+        return MainPanel._rightBox
+            .get_children()
+            .findIndex(
+                (item) =>
+                    item.firstChild === Main.panel.statusArea.quickSettings,
+            );
+    }
+
     getIndicatorPosition(): number {
-        const rightBoxItems = MainPanel._rightBox.get_children();
-
-        for (let index = 0; index < rightBoxItems.length; index++) {
-            const item = rightBoxItems[index];
-
-            if (item.firstChild === Main.panel.statusArea.quickSettings) {
-                // Return the position of Quick Settings so indicator goes before it
-                return index;
-            }
-        }
-
+        const index = this.quickSettingsIndex();
         // Fallback: if Quick Settings not found, put at the end
-        return rightBoxItems.length;
+        return index === -1 ? MainPanel._rightBox.get_children().length : index;
     }
 
     repositionIndicator() {
@@ -159,19 +158,7 @@ export class VeilIndicator {
 
         if (!container) return;
 
-        // Find Quick Settings position, accounting for our indicator being in the list
-        const rightBoxItems = MainPanel._rightBox.get_children();
-
-        let quickSettingsIndex = -1;
-
-        for (let index = 0; index < rightBoxItems.length; index++) {
-            const item = rightBoxItems[index];
-
-            if (item.firstChild === Main.panel.statusArea.quickSettings) {
-                quickSettingsIndex = index;
-                break;
-            }
-        }
+        const quickSettingsIndex = this.quickSettingsIndex();
 
         if (quickSettingsIndex === -1) {
             logger.warn("Could not find Quick Settings for repositioning");

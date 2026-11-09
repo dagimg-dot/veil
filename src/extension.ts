@@ -25,7 +25,7 @@ export default class Veil extends Extension {
     private veilMenuOpenStateHandlerId: number | null = null;
     private readonly extensionIdleSourceIds: Set<number> = new Set();
 
-    enable() {
+    override enable() {
         logger.info("Veil extension enabled");
 
         this.settings = this.getSettings();
@@ -258,7 +258,7 @@ export default class Veil extends Extension {
     // the main panel right box layout the same locked vs unlocked.
     //
     // Tear down all actors, signals, and main-loop sources.
-    disable() {
+    override disable() {
         logger.info("Veil extension disabled");
 
         for (const id of this.extensionIdleSourceIds) {

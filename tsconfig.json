@@ -6,9 +6,17 @@
     "moduleResolution": "nodenext",
     "outDir": "./dist",
     "isolatedModules": true,
-    "experimentalDecorators": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true
   },
-  "include": ["ambient.d.ts", "src/**/*.ts"]
+  "include": [
+    "ambient.d.ts",
+    "src/**/*.ts"
+  ]
 }
