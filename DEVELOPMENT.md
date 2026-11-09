@@ -10,7 +10,7 @@ This extension uses a modern TypeScript-based development workflow with Bun and 
 
 ### Prerequisites
 
-- **Host**: Bun, OpenSSH client, and Docker if you run the end-to-end tests without a VM
+- **Host**: Bun, OpenSSH client, rsync if you run the end-to-end tests on a VM, and Docker if you run them without one
 - **VM**: Linux distribution with GNOME 46 or newer on Wayland (I use Fedora)
 
 ### Development Scripts
