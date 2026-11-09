@@ -6,7 +6,11 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { Icons } from "../lib/icons.js";
-import { type GesturePanelButton, MainPanel } from "../types/index.js";
+import {
+    type ClickGesture,
+    type GesturePanelButton,
+    MainPanel,
+} from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { readInteractionMode } from "../utils/settings.js";
 
@@ -20,6 +24,8 @@ export class VeilIndicator {
     private settings: Gio.Settings;
     private isHovering = false;
     private readonly indicatorSignalIds: number[] = [];
+    private clickGesture: ClickGesture | null = null;
+    private clickGestureSignalId: number | null = null;
 
     constructor(extension: Extension, settings: Gio.Settings) {
         this.extension = extension;
@@ -68,15 +74,17 @@ export class VeilIndicator {
         // action.get_button() returns the mouse button that triggered it.
         const gesture = (btn as GesturePanelButton)._clickGesture;
         if (gesture) {
-            this.indicatorSignalIds.push(
-                gesture.connect("recognize", (action) => {
+            this.clickGesture = gesture;
+            this.clickGestureSignalId = gesture.connect(
+                "recognize",
+                (action) => {
                     if (action.get_button() === Clutter.BUTTON_PRIMARY) {
                         onPrimaryClick();
                     }
                     // Return PROPAGATE (false) to reject the gesture and prevent
                     // the default menu handler from showing on click.
                     return Clutter.EVENT_PROPAGATE;
-                }),
+                },
             );
         }
 
@@ -238,6 +246,11 @@ export class VeilIndicator {
     }
 
     destroy() {
+        if (this.clickGesture && this.clickGestureSignalId !== null) {
+            this.clickGesture.disconnect(this.clickGestureSignalId);
+            this.clickGesture = null;
+            this.clickGestureSignalId = null;
+        }
         if (this.indicator) {
             for (const id of this.indicatorSignalIds) {
                 this.indicator.disconnect(id);

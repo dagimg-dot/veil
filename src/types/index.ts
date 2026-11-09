@@ -22,6 +22,7 @@ export interface ClickGesture {
         signal: "recognize",
         handler: (action: ClickGesture) => boolean,
     ): number;
+    disconnect(id: number): void;
 }
 
 export type GesturePanelButton = PanelMenuButton & {
