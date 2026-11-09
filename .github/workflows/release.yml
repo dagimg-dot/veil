@@ -85,7 +85,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: ${{ steps.version.outputs.release_name }}
           body: |
-            ## ${{ steps.version.outputs.name }} ${{ steps.version.outputs.version_name }}
+            ## ${{ steps.version.outputs.name }} ${{ steps.version.outputs.version-name }}
 
             ### Installation
             1. Download the `.shell-extension.zip` file
