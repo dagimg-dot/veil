@@ -462,19 +462,16 @@ export class PanelManager {
             ? panelItems
             : panelItems.filter((item) => !visibleItems.includes(item.name));
 
-        const itemsToShowInstantly = animateAllItems
-            ? panelItems.filter((item) => visibleItems.includes(item.name))
-            : [];
+        const listedItems = panelItems.filter((item) =>
+            visibleItems.includes(item.name),
+        );
 
         if (revealed) {
             // Showing: animate affected items
             if (animationEnabled) {
                 this.fadeInItems(itemsToAnimate);
             } else {
-                this.showItemsInstantly([
-                    ...itemsToAnimate,
-                    ...itemsToShowInstantly,
-                ]);
+                this.showItemsInstantly([...itemsToAnimate, ...listedItems]);
             }
         } else {
             // Hiding: animate items being hidden, then restore always-visible
@@ -485,13 +482,10 @@ export class PanelManager {
             });
 
             if (animationEnabled) {
-                this.fadeOutItemsAndRestore(
-                    itemsToAnimate,
-                    itemsToShowInstantly,
-                );
+                this.fadeOutItemsAndRestore(itemsToAnimate, listedItems);
             } else {
                 this.hideItemsInstantly(itemsToAnimate);
-                this.showItemsInstantly(itemsToShowInstantly);
+                this.showItemsInstantly(listedItems);
             }
         }
 
@@ -555,7 +549,9 @@ export class PanelManager {
         Promise.all(fadeOutPromises).then(() => {
             // Fade in the always-visible items (itemsToRestore)
             // itemsToHide stay hidden
-            this.fadeInItems(itemsToRestore);
+            this.fadeInItems(
+                itemsToRestore.filter((item) => !item.container.visible),
+            );
         });
     }
 
