@@ -30,57 +30,61 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`;
 
 export interface AboutPageChildren {
-	_extensionIcon: Gtk.Image;
-	_extensionName: Gtk.Label;
-	_extensionVersion: Gtk.Label;
-	_linkWebsite: Gtk.Button;
-	_linkIssues: Gtk.Button;
-	_legalRow: Adw.ExpanderRow;
-	_extensionLicense: Gtk.TextView;
+    _extensionIcon: Gtk.Image;
+    _extensionName: Gtk.Label;
+    _extensionVersion: Gtk.Label;
+    _linkWebsite: Gtk.Button;
+    _linkIssues: Gtk.Button;
+    _legalRow: Adw.ExpanderRow;
+    _extensionLicense: Gtk.TextView;
 }
 
 export const AboutPage = GObject.registerClass(
-	{
-		GTypeName: "VeilAboutPage",
-		Template: getTemplate("AboutPage"),
-		InternalChildren: [
-			"extensionIcon",
-			"extensionName",
-			"extensionVersion",
-			"linkWebsite",
-			"linkIssues",
-			"legalRow",
-			"extensionLicense",
-		],
-	},
-	class AboutPage extends Adw.PreferencesPage {
-		setMetadata(metadata: ExtensionMetadata) {
-			const children = this as unknown as AboutPageChildren;
+    {
+        GTypeName: "VeilAboutPage",
+        Template: getTemplate("AboutPage"),
+        InternalChildren: [
+            "extensionIcon",
+            "extensionName",
+            "extensionVersion",
+            "linkWebsite",
+            "linkIssues",
+            "legalRow",
+            "extensionLicense",
+        ],
+    },
+    class AboutPage extends Adw.PreferencesPage {
+        setMetadata(metadata: ExtensionMetadata) {
+            const children = this as unknown as AboutPageChildren;
 
-			new Icons(metadata.path);
+            new Icons(metadata.path);
 
-			const veilIcon = Icons.get("arrow-close") as Gio.Icon;
+            const veilIcon = Icons.get("arrow-close") as Gio.Icon;
 
-			children._extensionIcon.set_from_gicon(veilIcon);
+            children._extensionIcon.set_from_gicon(veilIcon);
 
-			children._extensionName.set_text(metadata.name);
-			children._extensionVersion.set_text(
-				`v${metadata["version-name"] || metadata.version}${__VICINAE_ENV_SUFFIX__ ?? ""}`,
-			);
+            children._extensionName.set_text(metadata.name);
+            children._extensionVersion.set_text(
+                `v${metadata["version-name"] || metadata.version}${__VICINAE_ENV_SUFFIX__ ?? ""}`,
+            );
 
-			if (metadata.url) {
-				children._linkWebsite.connect("clicked", () => {
-					Gtk.show_uri(null, metadata.url || "", Gdk.CURRENT_TIME);
-				});
-				children._linkIssues.connect("clicked", () => {
-					Gtk.show_uri(null, `${metadata.url}/issues`, Gdk.CURRENT_TIME);
-				});
-			} else {
-				children._linkWebsite.visible = false;
-				children._linkIssues.visible = false;
-			}
+            if (metadata.url) {
+                children._linkWebsite.connect("clicked", () => {
+                    Gtk.show_uri(null, metadata.url || "", Gdk.CURRENT_TIME);
+                });
+                children._linkIssues.connect("clicked", () => {
+                    Gtk.show_uri(
+                        null,
+                        `${metadata.url}/issues`,
+                        Gdk.CURRENT_TIME,
+                    );
+                });
+            } else {
+                children._linkWebsite.visible = false;
+                children._linkIssues.visible = false;
+            }
 
-			children._extensionLicense.buffer.set_text(LICENSE, -1);
-		}
-	},
+            children._extensionLicense.buffer.set_text(LICENSE, -1);
+        }
+    },
 );
