@@ -1,4 +1,3 @@
-# The test image plus what a visible session needs: the devkit viewer, matched exactly to mutter.
 # Evolution, Online Accounts and the volume monitors are removed so the shell never starts them.
 ARG BASE=veil-vm-test:fedora-45
 FROM ${BASE}

@@ -1,8 +1,6 @@
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 
-// Veil has no D-Bus API, so the suites look at the panel through org.gnome.Shell.Eval.
-// Eval needs unsafe mode and has no access to PanelMenu; this extension provides both.
 const ROLE_PREFIX = "veil-test-";
 
 function describe(container) {
@@ -18,8 +16,6 @@ function describe(container) {
 const helper = {
     items: () => Main.panel._rightBox.get_children().map(describe),
 
-    // Registers the way a tray applet does. An empty name leaves the accessible
-    // name unset, like an AppIndicator before its D-Bus properties arrive.
     addItem(role, name = "") {
         const button = new PanelMenu.Button(0, name, true);
         button.accessible_name = name;
@@ -42,7 +38,6 @@ const helper = {
     item: (role) =>
         describe(Main.panel.statusArea[`${ROLE_PREFIX}${role}`].container),
 
-    // Screen rectangle of an item, so tests can click it through the virtual pointer
     indicatorCenter() {
         const button = Main.panel.statusArea.veil;
         const [x, y] = button.get_transformed_position();

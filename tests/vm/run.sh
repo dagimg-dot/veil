@@ -26,7 +26,6 @@ mkdir -p "$EXT_DIR"
 unzip -q "build/$UUID.shell-extension-v$VERSION.zip" -d "$EXT_DIR"
 glib-compile-schemas "$EXT_DIR/schemas"
 
-# Gives the suites access to panel state; see tests/vm/helper/extension.js
 HELPER_UUID=$(jq -r .uuid tests/vm/helper/metadata.json)
 cp -r tests/vm/helper "$XDG_DATA_HOME/gnome-shell/extensions/$HELPER_UUID"
 

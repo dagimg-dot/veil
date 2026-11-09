@@ -1,8 +1,6 @@
 import { plugin } from "bun";
 import { Button, Clutter, GLib, panel, St } from "./fakes.js";
 
-// Unit tests run under Bun, where gi:// and Shell resource modules do not exist.
-// Source files get these stand-ins; anything needing real GNOME belongs in tests/vm.
 const stubs = {
     "gi://GLib": { default: GLib },
     "gi://Clutter": { default: Clutter },

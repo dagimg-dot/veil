@@ -1,11 +1,5 @@
 #!/usr/bin/env bun
 
-/**
- * Fails on any `any` or `unknown` type written in the TypeScript sources.
- * tsc allows both and Biome only flags `any`; this walks the AST, so words in
- * comments and strings don't count and a biome-ignore can't hide a use.
- */
-
 import { readFileSync } from "node:fs";
 import { Glob } from "bun";
 import ts from "typescript";

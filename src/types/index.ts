@@ -16,7 +16,6 @@ export interface PanelItem {
     originalVisible?: boolean;
 }
 
-/** The private click gesture `PanelMenu.Button` has since GNOME 50. */
 export interface ClickGesture {
     get_button(): number;
     connect(
@@ -25,7 +24,6 @@ export interface ClickGesture {
     ): number;
 }
 
-/** Older shells have no gesture, so the field is optional. */
 export type GesturePanelButton = PanelMenuButton & {
     _clickGesture?: ClickGesture;
 };

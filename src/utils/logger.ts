@@ -9,7 +9,6 @@ export type LoggingLevel = (typeof LOGGING_LEVELS)[number];
 
 export const DEFAULT_LOG_LEVEL: LoggingLevel = "info";
 
-/** What a GJS `catch` receives: a JS Error or a GLib.Error, which is not an Error subclass. */
 export type LogError = Error | GLib.Error;
 
 type LogValue = string | number | boolean | null | undefined | object;
@@ -54,7 +53,6 @@ export const deinitializeLogger = (settings: Gio.Settings) => {
     settings.disconnectObject(logger);
 };
 
-/** JS Errors and GLib.Error, which keeps its message on the prototype. */
 const isErrorLike = (data: LogData): data is LogError =>
     data instanceof Error ||
     (typeof data === "object" &&

@@ -19,16 +19,11 @@ import {
     trayRevealed,
 } from "../lib/shell.js";
 
-// VeilIndicator.destroy() disconnects the GNOME 50+ gesture's handler from the button.
-// Remove this once it is fixed, so the suite catches it coming back.
 allowLogged(/has no handler with id/);
-// PanelManager keeps hover handlers for an applet destroyed before its container left
-// the box, and touches it on disable. Remove once _onItemRemoved cleans those up.
 allowLogged(/has been already disposed/);
 
 const settings = extensionSettings();
 
-// Animations stay off except where a test turns them on, so states are immediate
 settings.set_boolean("animation-enabled", false);
 settings.set_string("interaction-mode", "click");
 settings.set_boolean("auto-hide-enabled", false);

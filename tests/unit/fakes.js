@@ -1,9 +1,5 @@
-// Stand-ins for the GNOME objects the sources touch. Anything needing real
-// Clutter behaviour (layout, real transitions, input) belongs in tests/vm.
-
 let nextSourceId = 1;
 
-/** Main-loop sources that are pending; tests fire them with `runSources`. */
 export const sources = new Map();
 
 function addSource(fn, delay) {
@@ -12,7 +8,6 @@ function addSource(fn, delay) {
     return id;
 }
 
-/** Runs everything pending now; sources added meanwhile wait for the next call. */
 export function runSources() {
     for (const [id, { fn }] of [...sources]) {
         if (sources.delete(id)) fn();
@@ -147,7 +142,6 @@ export const panel = {
     statusArea: { quickSettings: new Widget() },
 };
 
-/** A `_rightBox` child wrapping a tray applet, added through the signal Shell emits. */
 export function addPanelItem(name, { visible = true } = {}) {
     const child = new Button();
     child.accessible_name = name;
@@ -165,7 +159,6 @@ export function resetPanel() {
     sources.clear();
 }
 
-/** Gio.Settings over a plain object; `change` writes a key as the prefs window would. */
 export function fakeSettings(values = {}) {
     const store = new Map(Object.entries(values));
     const signals = new Signals();

@@ -7,7 +7,6 @@ export GDK_DISABLE=gl,vulkan GDK_DEBUG=no-portals GTK_A11Y=none
 export XDG_CURRENT_DESKTOP=GNOME
 
 gsettings set org.gnome.shell disable-user-extensions false
-# Lets the suites run on a shell newer than metadata.json lists
 gsettings set org.gnome.shell disable-extension-version-validation true
 gsettings set org.gnome.shell enabled-extensions "['$VM_TEST_UUID', '$VM_TEST_HELPER_UUID']"
 gsettings set org.gnome.shell welcome-dialog-last-shown-version '999'

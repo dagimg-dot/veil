@@ -8,7 +8,6 @@ MAJOR=$(gnome-shell --version | awk '{print $3}' | cut -d. -f1)
 touch "$XDG_DATA_HOME/gnome-shell/update-check-$MAJOR"
 
 gsettings set org.gnome.shell disable-user-extensions false
-# Lets the extension load on a shell newer than metadata.json lists
 gsettings set org.gnome.shell disable-extension-version-validation true
 gsettings set org.gnome.shell enabled-extensions "['$UUID']"
 gsettings set org.gnome.shell welcome-dialog-last-shown-version '999'

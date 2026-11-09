@@ -53,7 +53,6 @@ function moveTo(path, x, y) {
         ]);
     move(-100000, -100000);
     move(x, y);
-    // A small extra motion makes Mutter re-pick the actor under the pointer
     sleep(100);
     move(1, 0);
     move(-1, 0);

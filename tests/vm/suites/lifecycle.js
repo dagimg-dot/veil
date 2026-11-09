@@ -14,8 +14,6 @@ import {
     panelItems,
 } from "../lib/shell.js";
 
-// VeilIndicator.destroy() disconnects the GNOME 50+ gesture's handler from the button.
-// Remove this once it is fixed, so the suite catches it coming back.
 allowLogged(/has no handler with id/);
 
 const settings = extensionSettings();

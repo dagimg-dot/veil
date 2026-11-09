@@ -41,7 +41,6 @@ const callExtensions = (method, signature, args) =>
         args,
     )[0];
 
-/** Evaluates `code` inside the shell and returns its JSON-decoded value. */
 export function evalInShell(code) {
     const [success, result] = callShell(
         "/org/gnome/Shell",
@@ -96,7 +95,6 @@ export const extension = {
     },
 };
 
-// The shell starts in the overview, which covers the panel's input; a real user dismisses it after login
 export function leaveOverview() {
     const property = (method, args) =>
         callShell(
@@ -129,7 +127,6 @@ export const helperReady = () => evalInShell("typeof veilTest !== 'undefined'");
 
 let nextRole = 0;
 
-/** A fake tray applet; removed again when the suite ends. */
 export function addTrayItem(name = "") {
     const role = `item-${nextRole++}`;
     helperCall("addItem", role, name);
