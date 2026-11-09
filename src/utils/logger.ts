@@ -3,7 +3,6 @@ import type GLib from "gi://GLib";
 
 const PROJECT_NAME = "Veil";
 
-/** GSettings `logging-level` string values in ComboRow and verbosity order. */
 export const LOGGING_LEVELS = ["error", "warn", "info", "debug"] as const;
 export type LoggingLevel = (typeof LOGGING_LEVELS)[number];
 
@@ -20,7 +19,6 @@ export type LogData =
     | LogError
     | Record<string, LogValue>;
 
-/** Index of a `logging-level` value in LOGGING_LEVELS, falling back to the default. */
 export const getVerbosity = (level: string): number => {
     const idx = (LOGGING_LEVELS as readonly string[]).indexOf(
         level.toLowerCase(),
@@ -28,14 +26,12 @@ export const getVerbosity = (level: string): number => {
     return idx >= 0 ? idx : LOGGING_LEVELS.indexOf(DEFAULT_LOG_LEVEL);
 };
 
-// Global verbosity threshold for logger
 let currentVerbosity: number = getVerbosity(DEFAULT_LOG_LEVEL);
 
 export const initializeLogger = (settings: Gio.Settings) => {
     const levelString = settings.get_string("logging-level");
     currentVerbosity = getVerbosity(levelString);
 
-    // Listen for log level changes
     settings.connectObject(
         "changed::logging-level",
         () => {
@@ -59,7 +55,6 @@ const isErrorLike = (data: LogData): data is LogError =>
         "message" in data &&
         typeof data.message === "string");
 
-// Single write function — all console output routes through here
 const write = (prefix: string, message: string, data?: LogData) => {
     const lines = [`${prefix}: ${message}`];
     if (data !== undefined) {

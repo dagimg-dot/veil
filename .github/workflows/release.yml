@@ -3,7 +3,7 @@ name: Release Extension
 on:
   push:
     tags:
-      - "v*" # Trigger on version tags like v1.0.0
+      - "v*"
 
 permissions:
   contents: write
@@ -45,12 +45,10 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          # Extract version from metadata.json
           VERSION=$(node -p "require('./metadata.json').version")
           VERSION_NAME=$(node -p "require('./metadata.json')['version-name']")
           NAME=$(node -p "require('./metadata.json').name")
 
-          # Create release name
           RELEASE_NAME="${NAME} v${VERSION_NAME}"
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -61,7 +59,6 @@ jobs:
       - name: Find extension zip file
         id: find-zip
         run: |
-          # Find the built extension zip file
           ZIP_FILE=$(find build/ -name "*.shell-extension-v*.zip" | head -n 1)
           if [ -z "$ZIP_FILE" ]; then
             echo "Error: No extension zip file found in build directory"

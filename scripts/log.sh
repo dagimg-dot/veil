@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Function to display help information
 show_help() {
     echo "Usage: $0 [OPTION]"
 	echo ""
@@ -20,26 +19,21 @@ show_help() {
     echo "Make sure to run this script from your GNOME Shell extension's directory."
 }
 
-# Check if metadata.json exists
 if [ ! -f metadata.json ]; then
     echo "Error: metadata.json not found"
     echo "Please run this script from your GNOME Shell extension's directory."
     exit 1
 fi
 
-# Extract the project name from metadata.json
 PROJECT_NAME=$(cat metadata.json | jq -r '.name')
 
-# Check if project name is empty
 if [ -z "$PROJECT_NAME" ]; then
     echo "Error: metadata.json does not contain a name field"
     exit 1
 fi
 
-# Default to unfiltered logs
 FILTERED=false
 
-# Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         -f|--filtered) FILTERED=true ;;

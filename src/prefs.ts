@@ -15,7 +15,6 @@ export default class VeilPrefs extends ExtensionPreferences {
             _settings: Gio.Settings;
         };
 
-        // Create a settings object and bind the row to our key.
         // Attach the settings object to the window to keep it alive while the window is alive.
         prefsWindow._settings = this.getSettings();
 

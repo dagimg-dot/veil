@@ -30,7 +30,6 @@ export class AnimationManager {
 
         const duration = this.settings.get_int("animation-duration");
 
-        // Set start state - slide from right and fade in
         actor.opacity = 0;
         actor.set_translation(SLIDE_OFFSET, 0, 0);
 

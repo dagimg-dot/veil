@@ -28,10 +28,8 @@ export const ItemsPage = GObject.registerClass(
                 this.handleReset();
             });
 
-            // Initial load
             this.updateItemsList();
 
-            // Listen for changes to all-items and visible-items
             this.settings.connect("changed::all-items", () => {
                 this.updateItemsList();
             });
@@ -50,7 +48,6 @@ export const ItemsPage = GObject.registerClass(
                 visibleItemsCount: visibleItems.length,
             });
 
-            // Remove old rows that no longer exist
             for (const [itemName, row] of this.itemRows.entries()) {
                 if (!allItems.includes(itemName)) {
                     const handlerId = this.handlerIds.get(itemName);
@@ -66,7 +63,6 @@ export const ItemsPage = GObject.registerClass(
                 }
             }
 
-            // Add or update rows for all items
             allItems.forEach((itemName) => {
                 let row = this.itemRows.get(itemName);
 
@@ -108,7 +104,6 @@ export const ItemsPage = GObject.registerClass(
             for (const [itemName, row] of this.itemRows.entries()) {
                 const isVisible = visibleItems.includes(itemName);
 
-                // Only update if state changed to avoid infinite loops
                 if (row.active !== isVisible) {
                     this.updateRowState(row, isVisible);
                 }
@@ -120,12 +115,10 @@ export const ItemsPage = GObject.registerClass(
             const index = visibleItems.indexOf(itemName);
 
             if (isActive && index < 0) {
-                // Add to visible items
                 visibleItems.push(itemName);
                 this.settings.set_strv("visible-items", visibleItems);
                 logger.debug("Item added to visible items", { itemName });
             } else if (!isActive && index >= 0) {
-                // Remove from visible items
                 visibleItems.splice(index, 1);
                 this.settings.set_strv("visible-items", visibleItems);
                 logger.debug("Item removed from visible items", { itemName });

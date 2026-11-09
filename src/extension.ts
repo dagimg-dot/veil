@@ -35,7 +35,6 @@ export default class Veil extends Extension {
         this.indicator = new VeilIndicator(this, this.settings);
         const indicatorButton = this.indicator.getButton();
 
-        // Position indicator right before Quick Settings
         const indicatorPosition = this.indicator.getIndicatorPosition();
 
         Main.panel.addToStatusArea(
@@ -119,13 +118,11 @@ export default class Veil extends Extension {
         this.stateManager.setOnPanelRevealChanged((revealed) => {
             this.panelManager?.setPermanentVisibility(revealed);
             this.indicator?.updateIcon(revealed);
-            // Reposition indicator after visibility changes
             this.indicator?.repositionIndicator();
         });
 
         this.panelManager.setOnItemsChanged((items) => {
             logger.debug("Panel items changed", { count: items.length });
-            // Reposition indicator when items are added/removed
             this.indicator?.repositionIndicator();
         });
 
@@ -239,7 +236,6 @@ export default class Veil extends Extension {
             return;
         }
 
-        // Restore icon to hidden state after hover completes
         this.indicator.restoreIconAfterHover();
     }
 

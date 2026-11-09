@@ -4,7 +4,6 @@ set -euo pipefail
 PORT=22
 VM_TARGET=""
 
-# Parse arguments to support a custom port
 while [[ $# -gt 0 ]]; do
 	case $1 in
 	-p | --port)
@@ -24,10 +23,8 @@ if [ -z "$VM_TARGET" ]; then
 	exit 1
 fi
 
-# Get the script directory
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-# Get the project directory (parent of scripts)
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECT_NAME="$(basename "$PROJECT_DIR" | tr '[:upper:]' '[:lower:]')"
 PROJECT_ABSOLUTE_PATH="$(realpath "$PROJECT_DIR")"
@@ -35,18 +32,15 @@ PROJECT_ABSOLUTE_PATH="$(realpath "$PROJECT_DIR")"
 echo "Project detected: $PROJECT_NAME"
 echo "Project path: $PROJECT_ABSOLUTE_PATH"
 
-# Helper function to get machine IP (Linux & macOS)
 get_machine_ip() {
 	local ip=""
 
 	if [ "$(uname -s)" = "Darwin" ]; then
-		# macOS: get IP from the interface of the default route
 		local iface
 		iface=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')
 		if [ -n "$iface" ]; then
 			ip=$(ifconfig "$iface" 2>/dev/null | awk '/inet /{print $2; exit}')
 		fi
-		# Fallback: scan common interfaces
 		if [ -z "$ip" ]; then
 			for iface in en0 en1 en2 en3; do
 				ip=$(ifconfig "$iface" 2>/dev/null | awk '/inet /{print $2; exit}')
@@ -54,7 +48,6 @@ get_machine_ip() {
 			done
 		fi
 	else
-		# Linux
 		ip=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K\S+' | head -1)
 
 		if [ -z "$ip" ]; then
@@ -73,7 +66,6 @@ get_machine_ip() {
 	echo "$ip"
 }
 
-# Helper function to construct host specification
 get_host_spec() {
 	local project_path="$1"
 	local machine_ip
@@ -81,7 +73,6 @@ get_host_spec() {
 	echo "$(whoami)@${machine_ip}:${project_path}"
 }
 
-# Generate the dev script
 DEV_SCRIPT_NAME="dev-${PROJECT_NAME}.sh"
 DEV_SCRIPT_PATH="${SCRIPT_DIR}/${DEV_SCRIPT_NAME}"
 
@@ -110,11 +101,9 @@ chmod +x "$DEV_SCRIPT_PATH"
 
 echo "Generated ${DEV_SCRIPT_NAME} with host spec: $(get_host_spec "$PROJECT_ABSOLUTE_PATH")"
 
-# Copy the dev script to the VM using the correct port flag (-P for scp)
 echo "Copying ${DEV_SCRIPT_NAME} to $VM_TARGET:~/"
 scp -P "$PORT" "$DEV_SCRIPT_PATH" "$VM_TARGET:~/"
 
-# Setup VM using the correct port flag (-p for ssh)
 echo "Preparing VM (install sshfs, create mountpoint, set permissions)..."
 
 # Run via bash explicitly so it works when the VM's login shell is fish (or other non-bash).

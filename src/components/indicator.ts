@@ -60,7 +60,6 @@ export class VeilIndicator {
         const onPrimaryClick = () => {
             const interactionMode = readInteractionMode(this.settings);
 
-            // Only handle clicks in Click mode
             if (interactionMode === "click") {
                 logger.debug("Primary click on Veil indicator");
                 this.onToggleCallback?.();
@@ -75,8 +74,6 @@ export class VeilIndicator {
         };
 
         // GNOME 50+: intercept the click gesture before it shows the default menu.
-        // The gesture's 'recognize' handler receives the action itself;
-        // action.get_button() returns the mouse button that triggered it.
         const gesture = (btn as GesturePanelButton)._clickGesture;
         if (gesture) {
             this.clickGesture = gesture;
@@ -107,7 +104,6 @@ export class VeilIndicator {
             this,
         );
 
-        // Add touch support
         btn.connectObject(
             "touch-event",
             (_actor: Clutter.Actor, event: Clutter.Event) => {
@@ -144,7 +140,6 @@ export class VeilIndicator {
             this.iconWidget = null;
         }
 
-        // left-arrow = show (items visible), right-arrow = hide (items hidden)
         const iconName = isVisible ? "arrow-close" : "arrow-open";
         const veilIcon = Icons.get(iconName);
 
@@ -170,7 +165,6 @@ export class VeilIndicator {
 
     getIndicatorPosition(): number {
         const index = this.quickSettingsIndex();
-        // Fallback: if Quick Settings not found, put at the end
         return index === -1 ? MainPanel._rightBox.get_children().length : index;
     }
 
@@ -188,7 +182,6 @@ export class VeilIndicator {
             return;
         }
 
-        // Move indicator to be right before Quick Settings
         MainPanel._rightBox.set_child_at_index(
             container,
             Math.max(0, quickSettingsIndex - 1),
@@ -206,10 +199,8 @@ export class VeilIndicator {
             () => {
                 const interactionMode = readInteractionMode(this.settings);
 
-                // Only handle hover in Hover mode
                 if (interactionMode === "hover") {
                     this.isHovering = true;
-                    // Change icon to visible state during hover
                     this.updateIcon(true);
                     this.onHoverEnterCallback?.();
                 }
@@ -223,7 +214,6 @@ export class VeilIndicator {
             () => {
                 const interactionMode = readInteractionMode(this.settings);
 
-                // Only handle hover in Hover mode
                 if (interactionMode === "hover") {
                     this.isHovering = false;
                     this.onHoverLeaveCallback?.();
@@ -246,7 +236,6 @@ export class VeilIndicator {
         this.onHoverLeaveCallback = callback;
     }
 
-    /** When a Shell menu closes without a matching leave-event (hover mode). */
     notifyHoverLeaveSyncFromMenu() {
         if (readInteractionMode(this.settings) !== "hover") return;
         this.isHovering = false;
@@ -254,7 +243,6 @@ export class VeilIndicator {
     }
 
     restoreIconAfterHover() {
-        // Restore icon to hidden state after hover ends
         if (!this.isHovering) {
             this.updateIcon(false);
         }

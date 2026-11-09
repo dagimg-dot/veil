@@ -1,7 +1,3 @@
-/**
- * Pure rules for whether Veil may reveal a tray item (click or hover expand).
- * Keeps behavior aligned between animation and instant paths.
- */
 export function shouldOfferRevealForItem(
     item: { name: string; originalVisible?: boolean },
     visibleItemNames: readonly string[],

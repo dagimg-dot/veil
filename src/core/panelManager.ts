@@ -1,15 +1,3 @@
-/**
- * Panel tray UI: tracks right-box items, animations, and hover interaction.
- *
- * Invariants:
- * - **Permanent visibility** (`setPermanentVisibility`) reflects `StateManager` /
- *   GSettings: the user’s collapsed vs expanded tray preference. It may write
- *   through to `StateManager` only indirectly via extension flows; this layer
- *   applies Clutter visibility to match that state.
- * - **Temporary visibility** (`setTemporaryVisibility` / `scheduleTemporaryHide`)
- *   is hover-only preview: it never updates `StateManager`; teardown restores
- *   via `restoreVisibilityToSavedState` → `setPermanentVisibility(isPanelRevealed())`.
- */
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
@@ -24,11 +12,6 @@ import { AnimationManager } from "./animationManager.js";
 import { shouldOfferRevealForItem } from "./panelRevealRules.js";
 import type { StateManager } from "./stateManager.js";
 
-/**
- * Pointer hover region (interaction-mode hover only).
- * Valid transitions include: none ↔ indicator (Veil), none/indicator ↔ panel
- * (tray items); menu-close sync and leave handlers may set none.
- */
 export type HoverInteractionZone = "none" | "indicator" | "panel";
 
 export class PanelManager {
@@ -43,14 +26,12 @@ export class PanelManager {
     private onPanelLeaveCallback?: () => void;
     private items: PanelItem[] = [];
     private hoverInteractionZone: HoverInteractionZone = "none";
-    /** True between button-press and release on a right-box item (avoids spurious leave on click). */
     private pointerDownOnPanelItem = false;
     private connectedApplets: Set<Clutter.Actor> = new Set();
     private nameWatchedApplets: Set<St.Widget> = new Set();
     private containersAwaitingChild: Set<Clutter.Actor> = new Set();
     private readonly nameWatchOwner = {};
     private hiddenByVeil: Set<Clutter.Actor> = new Set();
-    /** Pending `idle_add` from tray menu `open-state-changed` (removed in `destroy()`). */
     private menuCloseIdleSourceIds: Set<number> = new Set();
 
     constructor(
@@ -163,8 +144,6 @@ export class PanelManager {
     }
 
     /**
-     * Resets the press guard used to ignore spurious `leave-event` during a click.
-     *
      * Dismissing a tray menu with an outside click often never delivers
      * `button-release-event` to the applet. Without this reset, the guard stays
      * set and later real leaves are ignored, so hover hide never runs.
@@ -183,7 +162,6 @@ export class PanelManager {
         menu.connectObject(
             "open-state-changed",
             () => {
-                // isOpen is updated before emit; avoids relying on callback arity.
                 if (menu.isOpen) {
                     this.clearPointerDownHoverGuard();
                     return undefined;
@@ -196,7 +174,6 @@ export class PanelManager {
         );
     }
 
-    /** Cursor still over the top panel or a Shell popup (e.g. tray menu under uiGroup). */
     pointerInHoverSafeZone(): boolean {
         const [x, y] = global.get_pointer();
         let actor: Clutter.Actor | null = global.stage.get_actor_at_pos(
@@ -260,7 +237,6 @@ export class PanelManager {
         const child = actor.firstChild;
 
         if (!child) {
-            // Container was added before its child widget; defer until child arrives
             actor.connectObject(
                 "notify::first-child",
                 () => {
@@ -292,7 +268,6 @@ export class PanelManager {
     }
 
     private watchForNameChange(child: St.Widget, actor: Clutter.Actor) {
-        // Skip if we already have a handler for this item
         if (this.nameWatchedApplets.has(child)) {
             return;
         }
@@ -300,12 +275,10 @@ export class PanelManager {
         child.connectObject(
             "notify::accessible-name",
             () => {
-                // Re-apply visibility now that we have a name
                 const itemName = this.getItemName(child);
                 if (itemName) {
                     this.handleNewItemVisibility(itemName, actor);
                 }
-                // Disconnect after name is set (one-time watcher)
                 this.stopWatchingName(child);
                 this.updateAllItemsList();
                 this.onItemsChangedCallback?.(this.getAllItemNames());
@@ -321,7 +294,6 @@ export class PanelManager {
         this.animationManager.cancelAnimation(actor);
         this.hiddenByVeil.delete(actor);
 
-        // Clean up handlers
         if (this.containersAwaitingChild.delete(actor)) {
             actor.disconnectObject(this);
         }
@@ -337,7 +309,6 @@ export class PanelManager {
     }
 
     private updateAllItemsList() {
-        // Track items with their initial visibility
         this.items = this.getAllPanelItems();
         const itemNames = this.getAllItemNames();
         this.settings.set_strv("all-items", itemNames);
@@ -353,7 +324,6 @@ export class PanelManager {
                 const child = item.firstChild;
                 if (!child) return;
 
-                // Skip Quick Settings and Veil indicator
                 if (
                     child === MainPanel.statusArea.quickSettings ||
                     child === this.veilIndicator
@@ -361,7 +331,6 @@ export class PanelManager {
                     return;
                 }
 
-                // Get item name
                 const name = this.getItemName(child as St.Widget);
 
                 if (name) {
@@ -382,7 +351,6 @@ export class PanelManager {
                 const child = item.firstChild;
                 if (!child) return;
 
-                // Skip Quick Settings and Veil indicator
                 if (
                     child === MainPanel.statusArea.quickSettings ||
                     child === this.veilIndicator
@@ -414,12 +382,10 @@ export class PanelManager {
     }
 
     getItemName(item: St.Widget): string | null {
-        // Try accessible_name first
         if (item.accessible_name && item.accessible_name !== "") {
             return item.accessible_name;
         }
 
-        // Fall back to constructor type name
         if (item.constructor && "name" in item.constructor) {
             return item.constructor.name;
         }
@@ -435,7 +401,6 @@ export class PanelManager {
         const animationEnabled = this.settings.get_boolean("animation-enabled");
         const animateAllItems = this.settings.get_boolean("animate-all-items");
 
-        // Determine which items to animate vs show instantly
         const itemsToAnimate = animateAllItems
             ? panelItems
             : panelItems.filter((item) => !visibleItems.includes(item.name));
@@ -445,16 +410,12 @@ export class PanelManager {
         );
 
         if (revealed) {
-            // Showing: animate affected items
             if (animationEnabled) {
                 this.fadeInItems(itemsToAnimate);
             } else {
                 this.showItemsInstantly([...itemsToAnimate, ...listedItems]);
             }
         } else {
-            // Hiding: animate items being hidden, then restore always-visible
-            // Watch for accessible_name changes on existing items so we can
-            // re-apply visibility once their real name is available
             panelItems.forEach((item) => {
                 this.watchForNameChange(item.actor, item.container);
             });
@@ -525,8 +486,6 @@ export class PanelManager {
             });
 
         Promise.all(fadeOutPromises).then(() => {
-            // Fade in the always-visible items (itemsToRestore)
-            // itemsToHide stay hidden
             this.fadeInItems(
                 itemsToRestore.filter((item) => !item.container.visible),
             );
@@ -571,7 +530,6 @@ export class PanelManager {
     }
 
     setTemporaryVisibility() {
-        // Cancel any pending hide timer
         this.cancelHoverHideTimer();
 
         const panelItems = this.getAllPanelItems();

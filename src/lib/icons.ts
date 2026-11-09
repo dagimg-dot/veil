@@ -14,7 +14,6 @@ export class Icons {
 
         this.loadIcons();
 
-        // Watch for settings changes
         if (Icons.#settings) {
             Icons.#settings.connectObject(
                 "changed::custom-open-icon",
@@ -30,7 +29,6 @@ export class Icons {
         }
     }
 
-    /** Disconnect settings signals (call from extension `disable()` while settings is still valid). */
     static teardown(settings: Gio.Settings) {
         settings.disconnectObject(Icons);
         Icons.#settings = null;
@@ -45,7 +43,6 @@ export class Icons {
     private loadIcon(name: ICON) {
         let iconPath: string | null = null;
 
-        // Try to load custom icon if settings available and it's arrow-open or arrow-close
         if (
             Icons.#settings &&
             (name === "arrow-open" || name === "arrow-close")
@@ -65,7 +62,6 @@ export class Icons {
             }
         }
 
-        // Fallback to default icon if no custom icon or custom icon doesn't exist
         if (!iconPath) {
             iconPath = `${Icons.#extPath}/assets/icons/${name}.svg`;
         }
@@ -74,7 +70,6 @@ export class Icons {
             const icon = Gio.icon_new_for_string(iconPath);
             Icons.#icons.set(name, icon);
         } catch (e) {
-            // If loading fails, try default as last resort
             if (iconPath.includes("/assets/icons/")) {
                 throw e;
             }

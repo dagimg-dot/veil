@@ -4,10 +4,6 @@ import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/**
- * Bumps the extension version
- * @param {string} newVersion - New version (e.g., "1.1.0")
- */
 function bumpVersion(newVersion) {
     const projectRoot = join(import.meta.dir, "..");
 
@@ -42,18 +38,12 @@ function bumpVersion(newVersion) {
     }
 }
 
-/**
- * Creates a git release with commit, push, tag, and push tag
- * @param {string} newVersion - New version (e.g., "1.1.0")
- */
 function createRelease(newVersion) {
     const projectRoot = join(import.meta.dir, "..");
 
     try {
-        // Change to project directory
         process.chdir(projectRoot);
 
-        // Check if we're in a git repository
         try {
             execSync("git rev-parse --git-dir", { stdio: "ignore" });
         } catch {
@@ -61,7 +51,6 @@ function createRelease(newVersion) {
             process.exit(1);
         }
 
-        // Check if there are uncommitted changes
         const status = execSync("git status --porcelain", { encoding: "utf8" });
         if (status.trim()) {
             console.error(
@@ -72,23 +61,18 @@ function createRelease(newVersion) {
             process.exit(1);
         }
 
-        // Bump version first
         bumpVersion(newVersion);
 
-        // Add version files
         console.log("📝 Adding version files to git...");
         execSync("git add package.json metadata.json", { stdio: "inherit" });
 
-        // Commit with conventional commit message
         const commitMessage = `chore: bump version to ${newVersion}`;
         console.log(`💾 Committing: ${commitMessage}`);
         execSync(`git commit -m "${commitMessage}"`, { stdio: "inherit" });
 
-        // Push to remote
         console.log("🚀 Pushing to remote...");
         execSync("git push", { stdio: "inherit" });
 
-        // Create and push tag
         const tagName = `v${newVersion}`;
         console.log(`🏷️  Creating tag: ${tagName}`);
         execSync(`git tag ${tagName}`, { stdio: "inherit" });
@@ -107,7 +91,6 @@ function createRelease(newVersion) {
     }
 }
 
-// Get command and version from command line arguments
 const command = process.argv[2];
 const newVersion = process.argv[3];
 
@@ -129,7 +112,6 @@ if (!newVersion) {
     process.exit(1);
 }
 
-// Validate version format (simple semver check)
 if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
     console.error(
         "❌ Invalid version format. Please use semantic versioning (e.g., 1.2.0)",
@@ -137,7 +119,6 @@ if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
     process.exit(1);
 }
 
-// Execute command
 switch (command) {
     case "bump":
         bumpVersion(newVersion);

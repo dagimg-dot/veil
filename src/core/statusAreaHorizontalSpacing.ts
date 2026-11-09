@@ -1,8 +1,4 @@
-/**
- * Reduces horizontal gap between top-panel status indicators by applying
- * `-natural-hpadding` (and optionally `-minimum-hpadding`) on each `panel-button`.
- * Ported from the Status Area Horizontal Spacing extension; see README for credit.
- */
+/** Ported from the Status Area Horizontal Spacing extension; see README for credit. */
 import type Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
 import type St from "gi://St";
@@ -25,10 +21,6 @@ function mergeWithBaseline(paddingStyle: string, baseline: string): string {
     return baseline.length > 0 ? `${paddingStyle}; ${baseline}` : paddingStyle;
 }
 
-/**
- * Each `_rightBox` child is a wrapper; the clickable `panel-button` is usually
- * the wrapper itself or its first child (same one-level rule as upstream).
- */
 function resolvePanelButton(container: Clutter.Actor): St.Widget | null {
     const widget = container as St.Widget;
     if (widget.has_style_class_name?.(PANEL_BUTTON_CLASS)) {

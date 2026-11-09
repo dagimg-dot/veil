@@ -2,12 +2,6 @@
 
 set -e
 
-# ==============================================================================
-# This script builds the zip package for the extension. It compiles translations
-# and resources, if there are any. It also installs the extension, if requested.
-# Use `--help` for more information.
-# ==============================================================================
-
 function compile_resources() {
 	echo "Creating resource xml..."
 
@@ -55,7 +49,6 @@ function compile_translations() {
 }
 
 function build_extension_package() {
-	# Compile TypeScript files, if used
 	if [ "$USING_TYPESCRIPT" = "true" ]; then
 		if ! (command -v bun &>/dev/null); then
 			echo "ERROR: bun isn't installed. Can't compile TypeScript files. Exiting..."
@@ -96,7 +89,6 @@ function build_extension_package() {
 		fi
 	fi
 
-	# Compile translations, if there are any
 	if (find po/ -type f | grep ".po$") &>/dev/null; then
 		if command -v msgfmt &>/dev/null; then
 			compile_translations
@@ -105,7 +97,6 @@ function build_extension_package() {
 		fi
 	fi
 
-	# Compile resources, if there are any
 	if (find data/ -type f | grep ".") &>/dev/null; then
 		if command -v glib-compile-resources &>/dev/null; then
 			compile_resources
@@ -129,18 +120,14 @@ function build_extension_package() {
 		mkdir -p "$BUILD_DIR"
 		rm -f "$BUILD_DIR/$UUID.shell-extension-v$VERSION.zip"
 
-		# Place the gresource at the root of the archive while keeping the built file under build/
-		# Only copy if the resource file exists
 		if [ -f "$RESOURCE_TARGET" ]; then
 			cp "$RESOURCE_TARGET" "$JS_DIR/"
 		fi
 
-		# Copy metadata.json and LICENSE to dist/ directory so they're at the root of the zip
 		cp metadata.json "$JS_DIR/"
 		cp LICENSE "$JS_DIR/"
 		cd "$JS_DIR" && zip -qr "../$BUILD_DIR/$UUID.shell-extension-v$VERSION.zip" .
 
-		# Clean up temporary files
 		if [ -f "$JS_DIR/$UUID.gresource" ]; then
 			rm -f "$JS_DIR/$UUID.gresource"
 		fi
@@ -254,10 +241,6 @@ function usage() {
 	EOF
 }
 
-###########################
-# Main script starts here #
-###########################
-
 cd -- "$(dirname "$0")/../"
 
 UUID=$(sed -n 's/.*"uuid": "\([^"]*\)".*/\1/p' metadata.json)
@@ -275,7 +258,6 @@ else
 	JS_DIR="src"
 fi
 
-# Parse options
 INSTALL=false
 UNSAFE_RELOAD=false
 BUILD=false
@@ -314,7 +296,6 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-# Default action is to build if no other action is specified
 if [ "$BUILD" = false ] && [ "$INSTALL" = false ] && [ "$UNSAFE_RELOAD" = false ]; then
 	BUILD=true
 fi

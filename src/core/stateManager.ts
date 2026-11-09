@@ -2,14 +2,9 @@ import type Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { logger } from "../utils/logger.js";
 
-/**
- * Canonical "panel revealed" state: whether Veil is showing the expanded tray
- * (vs collapsed). Persists via GSettings when save-state is enabled.
- * Keys in the schema remain *-visibility for compatibility.
- */
+/** Schema keys keep their *-visibility names for compatibility. */
 export class StateManager {
     private settings: Gio.Settings;
-    /** When true, the tray is expanded per user/saved preference (click mode, or baseline for hover). */
     private panelRevealed: boolean;
     private onPanelRevealChangedCallback?: (revealed: boolean) => void;
     private autoHideTimerId: number | null = null;

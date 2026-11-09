@@ -16,14 +16,12 @@
             <property name="margin-top">24</property>
             <property name="margin-bottom">32</property>
             <child>
-              <!-- App Icon -->
               <object class="GtkImage" id="extensionIcon">
                 <property name="pixel-size">64</property>
                 <property name="halign">3</property>
               </object>
             </child>
             <child>
-              <!-- App Name and Version -->
               <object class="GtkBox">
                 <property name="orientation">1</property>
                 <property name="halign">3</property>
@@ -49,7 +47,6 @@
               </object>
             </child>
             <child>
-              <!-- Action Buttons -->
               <object class="GtkBox">
                 <property name="orientation">1</property>
                 <property name="halign">3</property>
@@ -81,7 +78,6 @@
       </object>
     </child>
     <child>
-      <!-- Legal Section -->
       <object class="AdwPreferencesGroup">
         <child>
           <object class="AdwExpanderRow" id="legalRow">
