@@ -32,7 +32,7 @@
 - **Tighter status spacing**: lower the padding between top-bar indicators
 - **Coexists with other applets**: icons hidden by their own extension stay hidden when the tray expands
 
-Works on GNOME 46 to 50.
+Works on GNOME 46 to 51.
 
 ## Installation
 

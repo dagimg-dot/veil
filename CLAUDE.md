@@ -8,7 +8,7 @@ are newer in one than the other, so check which way each difference goes.
 
 ## Stack
 
-- Bun, TypeScript strict and esbuild without bundling, running under GJS on GNOME Shell 46 to 50.
+- Bun, TypeScript strict and esbuild without bundling, running under GJS on GNOME Shell 46 to 51.
 - Types from `@girs/gjs` and `@girs/gnome-shell`. Biome for lint and format.
 - Preferences are Adwaita pages built from `.ui` templates in `src/ui`.
 - Tests: `bun test` for units, and suites against a real headless GNOME Shell over SSH or Docker.
