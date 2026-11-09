@@ -9,8 +9,6 @@
  * - **Temporary visibility** (`setTemporaryVisibility` / `scheduleTemporaryHide`)
  *   is hover-only preview: it never updates `StateManager`; teardown restores
  *   via `restoreVisibilityToSavedState` → `setPermanentVisibility(isPanelRevealed())`.
- * - **`originalVisible === false`** means another extension hid the icon while the
- *   tray was expanded — not Veil’s own collapsed hide (see `mergeOriginalVisibleSnapshot`).
  */
 import Clutter from "gi://Clutter";
 import type Gio from "gi://Gio";
@@ -56,6 +54,7 @@ export class PanelManager {
     // Watch for late accessible_name changes
     private nameChangeHandlers: Map<St.Widget, number> = new Map();
     private firstChildHandlers: Map<Clutter.Actor, number> = new Map();
+    private hiddenByVeil: Set<Clutter.Actor> = new Set();
     /** Pending `idle_add` from tray menu `open-state-changed` (removed in `destroy()`). */
     private menuCloseIdleSourceIds: Set<number> = new Set();
 
@@ -236,23 +235,6 @@ export class PanelManager {
     private _onItemAdded(_container: St.BoxLayout, actor: Clutter.Actor) {
         logger.debug("Panel item added", { actor });
 
-        const child = actor.firstChild;
-        const panelRevealed = this.stateManager.isPanelRevealed();
-        if (child) {
-            const itemName = this.getItemName(child as St.Widget);
-            if (itemName) {
-                const existing = this.items.find((i) => i.name === itemName);
-                if (existing && existing.originalVisible !== false) {
-                    existing.originalVisible =
-                        this.mergeOriginalVisibleSnapshot(
-                            existing.originalVisible,
-                            actor.visible,
-                            panelRevealed,
-                        );
-                }
-            }
-        }
-
         this.updateAllItemsList();
 
         if (this.initialSetupComplete) {
@@ -262,28 +244,14 @@ export class PanelManager {
         this.onItemsChangedCallback?.(this.getAllItemNames());
     }
 
-    /**
-     * `false` = hidden while tray expanded (treat as another extension’s hide).
-     * When collapsed, `container.visible === false` is often Veil’s hide — use `undefined`.
-     */
-    private mergeOriginalVisibleSnapshot(
+    private reconcileOriginalVisible(
         prior: boolean | undefined,
-        containerVisible: boolean,
-        panelRevealed: boolean,
+        container: Clutter.Actor,
     ): boolean | undefined {
-        if (prior === false) {
-            return false;
-        }
-        if (prior === true) {
+        if (container.visible) {
             return true;
         }
-        if (!containerVisible && !panelRevealed) {
-            return undefined;
-        }
-        if (!containerVisible && panelRevealed) {
-            return false;
-        }
-        return true;
+        return this.hiddenByVeil.has(container) ? prior : false;
     }
 
     private applyNewItemVisibility(actor: Clutter.Actor) {
@@ -332,12 +300,17 @@ export class PanelManager {
             // Disconnect after name is set (one-time watcher)
             child.disconnect(handlerId);
             this.nameChangeHandlers.delete(child);
+            this.updateAllItemsList();
+            this.onItemsChangedCallback?.(this.getAllItemNames());
         });
         this.nameChangeHandlers.set(child, handlerId);
     }
 
     private _onItemRemoved(_container: St.BoxLayout, actor: Clutter.Actor) {
         logger.debug("Panel item removed", { actor });
+
+        this.animationManager.cancelAnimation(actor);
+        this.hiddenByVeil.delete(actor);
 
         // Clean up handlers
         const firstChildHandler = this.firstChildHandlers.get(actor);
@@ -425,19 +398,18 @@ export class PanelManager {
                 const name = this.getItemName(child as St.Widget);
 
                 if (name) {
-                    const existing = this.items.find((i) => i.name === name);
-                    const panelRevealed = this.stateManager.isPanelRevealed();
-                    const originalVis = this.mergeOriginalVisibleSnapshot(
-                        existing?.originalVisible,
-                        item.visible,
-                        panelRevealed,
+                    const existing = this.items.find(
+                        (i) => i.container === item,
                     );
 
                     items.push({
                         name,
                         actor: child as St.Widget,
                         container: item as St.Widget,
-                        originalVisible: originalVis,
+                        originalVisible: this.reconcileOriginalVisible(
+                            existing?.originalVisible,
+                            item,
+                        ),
                     });
                 }
             },
@@ -526,13 +498,21 @@ export class PanelManager {
             if (!shouldOfferRevealForItem(item, visibleItems)) {
                 return;
             }
+            this.hiddenByVeil.delete(item.container);
             item.container.visible = true;
             item.container.opacity = 255;
         });
     }
 
+    private markHiddenByVeil(container: Clutter.Actor) {
+        if (container.visible) {
+            this.hiddenByVeil.add(container);
+        }
+    }
+
     private hideItemsInstantly(items: PanelItem[]) {
         items.forEach((item) => {
+            this.markHiddenByVeil(item.container);
             item.container.visible = false;
         });
     }
@@ -544,6 +524,7 @@ export class PanelManager {
             if (!shouldOfferRevealForItem(item, visibleItems)) {
                 return;
             }
+            this.hiddenByVeil.delete(item.container);
             this.animationManager.fadeIn(item.container);
         });
     }
@@ -552,9 +533,12 @@ export class PanelManager {
         itemsToHide: PanelItem[],
         itemsToRestore: PanelItem[],
     ) {
-        const fadeOutPromises = itemsToHide.map((item) =>
-            this.animationManager.fadeOut(item.container),
-        );
+        const fadeOutPromises = itemsToHide
+            .filter((item) => item.container.visible)
+            .map((item) => {
+                this.markHiddenByVeil(item.container);
+                return this.animationManager.fadeOut(item.container);
+            });
 
         Promise.all(fadeOutPromises).then(() => {
             // Fade in the always-visible items (itemsToRestore)
@@ -700,24 +684,28 @@ export class PanelManager {
         itemName: string,
         container: Clutter.Actor,
     ) {
-        const panelRevealed = this.stateManager.isPanelRevealed();
-        const visibleItems = this.settings.get_strv("visible-items");
-
-        if (panelRevealed) {
-            // Overall visibility is true (all items shown): show the new item
-            container.visible = true;
-            container.opacity = 255;
-            logger.debug("New item shown (panel revealed)", { itemName });
-        } else {
-            // Overall visibility is false (items hidden): show only if in visible-items list
-            const shouldBeVisible = visibleItems.includes(itemName);
-            container.visible = shouldBeVisible;
-            container.opacity = 255;
-            logger.debug("New item visibility set based on visible-items", {
-                itemName,
-                visible: shouldBeVisible,
-            });
+        if (!container.visible && !this.hiddenByVeil.has(container)) {
+            return;
         }
+
+        this.animationManager.cancelAnimation(container);
+
+        const shouldBeVisible =
+            this.stateManager.isPanelRevealed() ||
+            this.settings.get_strv("visible-items").includes(itemName);
+
+        if (shouldBeVisible) {
+            this.hiddenByVeil.delete(container);
+        } else {
+            this.markHiddenByVeil(container);
+        }
+        container.visible = shouldBeVisible;
+        container.opacity = 255;
+        container.set_translation(0, 0, 0);
+        logger.debug("New item visibility set", {
+            itemName,
+            visible: shouldBeVisible,
+        });
     }
 
     destroy() {
@@ -741,6 +729,8 @@ export class PanelManager {
             if (button.menu) button.menu.disconnect(handlerId);
         }
         this.menuOpenStateHandlers.clear();
+
+        this.hiddenByVeil.clear();
 
         if (this.addedHandlerId !== null) {
             MainPanel._rightBox.disconnect(this.addedHandlerId);
