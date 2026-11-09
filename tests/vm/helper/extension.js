@@ -13,6 +13,12 @@ function describe(container) {
     };
 }
 
+function center(actor) {
+    const [x, y] = actor.get_transformed_position();
+    const [width, height] = actor.get_transformed_size();
+    return [Math.round(x + width / 2), Math.round(y + height / 2)];
+}
+
 const helper = {
     items: () => Main.panel._rightBox.get_children().map(describe),
 
@@ -38,14 +44,14 @@ const helper = {
     item: (role) =>
         describe(Main.panel.statusArea[`${ROLE_PREFIX}${role}`].container),
 
-    indicatorCenter() {
-        const button = Main.panel.statusArea.veil;
-        const [x, y] = button.get_transformed_position();
-        const [width, height] = button.get_transformed_size();
-        return [Math.round(x + width / 2), Math.round(y + height / 2)];
-    },
+    indicatorCenter: () => center(Main.panel.statusArea.veil),
+
+    itemCenter: (role) =>
+        center(Main.panel.statusArea[`${ROLE_PREFIX}${role}`]),
 
     indicatorMenuOpen: () => Main.panel.statusArea.veil.menu.isOpen,
+
+    closeIndicatorMenu: () => Main.panel.statusArea.veil.menu.close(),
 
     trayRevealed: (uuid) =>
         Main.extensionManager

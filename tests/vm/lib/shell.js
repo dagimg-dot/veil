@@ -1,6 +1,7 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { afterAll, Fatal, notYet, waitFor } from "./harness.js";
+import { clickAt } from "./pointer.js";
 
 export const UUID = GLib.getenv("VM_TEST_UUID");
 export const ROOT = GLib.getenv("VM_TEST_ROOT");
@@ -143,6 +144,29 @@ export function addTrayItem(name = "") {
 export const panelItems = () => helperCall("items");
 export const indicatorCenter = () => helperCall("indicatorCenter");
 export const indicatorMenuOpen = () => helperCall("indicatorMenuOpen");
+export const closeIndicatorMenu = () => helperCall("closeIndicatorMenu");
+export const fadeOutTimeouts = () =>
+    new TextDecoder()
+        .decode(GLib.file_get_contents(LOGS[0])[1])
+        .split("Slide out timeout").length - 1;
+
 export const trayRevealed = () => helperCall("trayRevealed", UUID);
 export const windowClasses = () => helperCall("windowClasses");
 export const closeWindows = (wmClass) => helperCall("closeWindows", wmClass);
+
+export const itemCenter = (role) => helperCall("itemCenter", role);
+export const toggleTray = () => clickAt(...indicatorCenter());
+
+export function setTrayRevealed(revealed) {
+    if (trayRevealed() !== revealed) toggleTray();
+    waitFor(
+        `tray ${revealed ? "expanded" : "collapsed"}`,
+        () => trayRevealed() === revealed,
+    );
+}
+
+export const waitForItemVisible = (item, visible) =>
+    waitFor(
+        `${item.role} ${visible ? "shown" : "hidden"}`,
+        () => item.state().visible === visible,
+    );

@@ -64,6 +64,16 @@ export function pointAt(x, y) {
     moveTo(startInputDevices(), x, y);
 }
 
+export function pointBy(dx, dy) {
+    call(
+        startInputDevices(),
+        SESSION_IFACE,
+        "NotifyPointerMotionRelative",
+        "(dd)",
+        [dx, dy],
+    );
+}
+
 export function clickAt(x, y) {
     const path = startInputDevices();
     moveTo(path, x, y);

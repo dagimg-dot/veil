@@ -7,6 +7,7 @@ import {
     fakeSettings,
     panel,
     resetPanel,
+    sources,
     Widget,
 } from "./fakes.js";
 
@@ -39,6 +40,11 @@ function setup({ revealed = true, visibleItems = [] } = {}) {
 function collapse() {
     state.setPanelRevealed(false);
     manager.setPermanentVisibility(false);
+}
+
+function rename(child, name) {
+    child.accessible_name = name;
+    child.emit("notify::accessible-name");
 }
 
 function expand() {
@@ -119,6 +125,34 @@ describe("permanent visibility without animation", () => {
     });
 });
 
+describe("items whose owner changes their visibility", () => {
+    test("an item its owner hides while expanded is not revealed", () => {
+        setup();
+        const { container } = addPanelItem("tray");
+        container.visible = false;
+
+        collapse();
+        expand();
+
+        expect(container.visible).toBe(false);
+    });
+
+    test("an item its owner shows again takes part in the tray", () => {
+        setup();
+        const { container } = addPanelItem("tray");
+        container.visible = false;
+        collapse();
+        expand();
+
+        container.visible = true;
+        collapse();
+        expect(container.visible).toBe(false);
+
+        expand();
+        expect(container.visible).toBe(true);
+    });
+});
+
 describe("items added later", () => {
     test("are hidden when added to a collapsed tray", () => {
         setup();
@@ -135,10 +169,123 @@ describe("items added later", () => {
         expect(container.visible).toBe(true);
     });
 
+    test("return on expand when named after being hidden", () => {
+        setup();
+        collapse();
+        const { container, child } = addPanelItem("");
+        rename(child, "late-named");
+        manager.getAllPanelItems();
+
+        expand();
+
+        expect(container.visible).toBe(true);
+    });
+
+    test("are listed under the name they get later", () => {
+        setup();
+        collapse();
+        const { child } = addPanelItem("");
+
+        rename(child, "late-named");
+
+        expect(settings.peek("all-items")).toEqual(["late-named"]);
+    });
+
     test("stay shown when listed in visible-items", () => {
         setup({ visibleItems: ["late"] });
         collapse();
         const { container } = addPanelItem("late");
+        expect(container.visible).toBe(true);
+    });
+});
+
+describe("visible-items changing while collapsed", () => {
+    const applyList = (names) => {
+        settings.set_strv("visible-items", names);
+        manager.setPermanentVisibility(false);
+    };
+
+    test("an item switched on appears", () => {
+        setup();
+        const { container } = addPanelItem("tray");
+        collapse();
+
+        applyList(["tray"]);
+
+        expect(container.visible).toBe(true);
+    });
+
+    test("an item switched off hides", () => {
+        setup({ visibleItems: ["tray"] });
+        const { container } = addPanelItem("tray");
+        collapse();
+
+        applyList([]);
+
+        expect(container.visible).toBe(false);
+    });
+
+    test("an item its owner hid stays hidden when switched on", () => {
+        const { container } = addPanelItem("tray", { visible: false });
+        setup();
+        collapse();
+
+        applyList(["tray"]);
+
+        expect(container.visible).toBe(false);
+    });
+
+    test("with animations, an item switched on fades in", async () => {
+        setup();
+        settings.set_boolean("animation-enabled", true);
+        const { container } = addPanelItem("tray");
+        collapse();
+        container.emit("transitions-completed");
+
+        applyList(["tray"]);
+        await Bun.sleep(0);
+
+        expect(container.visible).toBe(true);
+        expect([...container.transitions.keys()]).toContain("veil-fade-in");
+    });
+
+    test("with animations, a listed item already showing is left alone", async () => {
+        setup({ visibleItems: ["kept"] });
+        settings.set_boolean("animation-enabled", true);
+        const { container } = addPanelItem("kept");
+
+        collapse();
+        await Bun.sleep(0);
+
+        expect(container.visible).toBe(true);
+        expect(container.transitions.size).toBe(0);
+    });
+});
+
+describe("animated collapse", () => {
+    test("does not fade items that are already hidden", () => {
+        setup();
+        settings.set_boolean("animation-enabled", true);
+        const { container } = addPanelItem("tray");
+
+        collapse();
+        container.emit("transitions-completed");
+        expect(container.visible).toBe(false);
+
+        collapse();
+        expect(container.transitions.size).toBe(0);
+        expect(sources.size).toBe(0);
+    });
+
+    test("an item hidden by the fade returns on expand", () => {
+        setup();
+        settings.set_boolean("animation-enabled", true);
+        const { container } = addPanelItem("tray");
+
+        collapse();
+        container.emit("transitions-completed");
+        expand();
+
         expect(container.visible).toBe(true);
     });
 });
@@ -165,6 +312,32 @@ describe("cleanup", () => {
 
         expect(panel._rightBox.handlers.size).toBe(0);
         expect(child.connectedTo("enter-event")).toBe(0);
+    });
+
+    test("destroy leaves an applet that was destroyed first alone", () => {
+        setup();
+        manager.setPermanentVisibility(true);
+        const { container, child } = addPanelItem("tray");
+
+        child.emit("destroy");
+        container.children = [];
+        panel._rightBox.children.pop();
+        panel._rightBox.emit("child-removed", container);
+        child.disconnect = () => {
+            throw new Error("touched a destroyed applet");
+        };
+
+        expect(() => manager.destroy()).not.toThrow();
+    });
+
+    test("destroy disconnects pending name watchers", () => {
+        setup();
+        collapse();
+        const { child } = addPanelItem("");
+
+        manager.destroy();
+
+        expect(child.connectedTo("notify::accessible-name")).toBe(0);
     });
 
     test("showAllItems reveals everything Veil hid", () => {

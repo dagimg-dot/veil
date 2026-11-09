@@ -1,26 +1,17 @@
 import Gio from "gi://Gio";
-import {
-    afterAll,
-    allowLogged,
-    assert,
-    sleep,
-    test,
-    todo,
-    waitFor,
-} from "../lib/harness.js";
-import { clickAt } from "../lib/pointer.js";
+import { afterAll, assert, sleep, test, waitFor } from "../lib/harness.js";
 import {
     addTrayItem,
     ExtensionState,
     extension,
     extensionSettings,
-    indicatorCenter,
+    fadeOutTimeouts,
     indicatorMenuOpen,
+    setTrayRevealed,
+    toggleTray,
     trayRevealed,
+    waitForItemVisible,
 } from "../lib/shell.js";
-
-allowLogged(/has no handler with id/);
-allowLogged(/has been already disposed/);
 
 const settings = extensionSettings();
 
@@ -41,62 +32,46 @@ afterAll(() => {
         settings.reset(key);
 });
 
-const toggle = () => clickAt(...indicatorCenter());
-const isRevealed = trayRevealed;
-
-function setRevealed(revealed) {
-    if (isRevealed() !== revealed) toggle();
-    waitFor(`tray ${revealed ? "expanded" : "collapsed"}`, () => {
-        return isRevealed() === revealed;
-    });
-}
-
-const waitForVisible = (item, visible) =>
-    waitFor(
-        `${item.role} ${visible ? "shown" : "hidden"}`,
-        () => item.state().visible === visible,
-    );
-
 test("clicking the indicator toggles the tray without opening its menu", () => {
-    const before = isRevealed();
-    toggle();
-    waitFor("tray state to flip", () => isRevealed() !== before);
+    const before = trayRevealed();
+    toggleTray();
+    waitFor("tray state to flip", () => trayRevealed() !== before);
     assert.ok(!indicatorMenuOpen(), "the indicator menu opened on a click");
-    toggle();
-    waitFor("tray state to flip back", () => isRevealed() === before);
+    toggleTray();
+    waitFor("tray state to flip back", () => trayRevealed() === before);
 });
 
 test("collapsing hides items and expanding shows them again", () => {
-    setRevealed(true);
+    setTrayRevealed(true);
     const item = addTrayItem("tray-basic");
-    waitForVisible(item, true);
-    setRevealed(false);
-    waitForVisible(item, false);
-    setRevealed(true);
-    waitForVisible(item, true);
+    waitForItemVisible(item, true);
+    setTrayRevealed(false);
+    waitForItemVisible(item, false);
+    setTrayRevealed(true);
+    waitForItemVisible(item, true);
 });
 
 test("items in visible-items stay shown while collapsed", () => {
-    setRevealed(true);
+    setTrayRevealed(true);
     const kept = addTrayItem("tray-kept");
     const hidden = addTrayItem("tray-hidden");
     settings.set_strv("visible-items", ["tray-kept"]);
-    setRevealed(false);
-    waitForVisible(hidden, false);
-    waitForVisible(kept, true);
+    setTrayRevealed(false);
+    waitForItemVisible(hidden, false);
+    waitForItemVisible(kept, true);
     settings.set_strv("visible-items", []);
 });
 
 test("an item added while collapsed is hidden, then shown on expand", () => {
-    setRevealed(false);
+    setTrayRevealed(false);
     const item = addTrayItem("tray-late");
-    waitForVisible(item, false);
-    setRevealed(true);
-    waitForVisible(item, true);
+    waitForItemVisible(item, false);
+    setTrayRevealed(true);
+    waitForItemVisible(item, true);
 });
 
 test("an item hidden before Veil starts stays hidden on expand", () => {
-    setRevealed(true);
+    setTrayRevealed(true);
     extension.disable();
     extension.waitForState(ExtensionState.INACTIVE);
     const item = addTrayItem("tray-self-hidden");
@@ -104,8 +79,8 @@ test("an item hidden before Veil starts stays hidden on expand", () => {
     extension.enable();
     extension.waitForState(ExtensionState.ACTIVE);
 
-    setRevealed(false);
-    setRevealed(true);
+    setTrayRevealed(false);
+    setTrayRevealed(true);
     sleep(200);
     assert.ok(!item.state().visible, "Veil revealed a self-hidden item");
     item.setVisible(true);
@@ -114,11 +89,14 @@ test("an item hidden before Veil starts stays hidden on expand", () => {
 test("an animated collapse and expand ends fully visible", () => {
     settings.set_boolean("animation-enabled", true);
     settings.set_int("animation-duration", 100);
-    setRevealed(true);
+    setTrayRevealed(true);
     const item = addTrayItem("tray-animated");
-    setRevealed(false);
-    waitForVisible(item, false);
-    setRevealed(true);
+    const timeoutsBefore = fadeOutTimeouts();
+    setTrayRevealed(false);
+    waitForItemVisible(item, false);
+    sleep(300);
+    assert.equal(fadeOutTimeouts(), timeoutsBefore, "fade-out timeouts");
+    setTrayRevealed(true);
     waitFor("the fade-in to finish", () => {
         const state = item.state();
         return (
@@ -128,30 +106,63 @@ test("an animated collapse and expand ends fully visible", () => {
     settings.set_boolean("animation-enabled", false);
 });
 
-todo(
-    "an item named after it was hidden is shown on expand",
-    "#19, #20: the hidden state is recorded as the owner's own hide",
-    () => {
-        setRevealed(false);
-        const item = addTrayItem("");
-        waitForVisible(item, false);
-        item.rename("tray-named-late");
-        sleep(100);
-        setRevealed(true);
-        waitForVisible(item, true);
-    },
-);
+test("an item named after it was hidden is shown on expand", () => {
+    setTrayRevealed(false);
+    const item = addTrayItem("");
+    waitForItemVisible(item, false);
+    item.rename("tray-named-late");
+    sleep(100);
+    setTrayRevealed(true);
+    waitForItemVisible(item, true);
+});
+
+test("an item its owner shows again takes part in the tray", () => {
+    setTrayRevealed(true);
+    const item = addTrayItem("tray-owner-toggled");
+    item.setVisible(false);
+    setTrayRevealed(false);
+    setTrayRevealed(true);
+    sleep(200);
+    assert.ok(!item.state().visible, "Veil revealed an owner-hidden item");
+
+    item.setVisible(true);
+    setTrayRevealed(false);
+    waitForItemVisible(item, false);
+    setTrayRevealed(true);
+    waitForItemVisible(item, true);
+});
+
+test("collapsing again does not wait on items already hidden", () => {
+    settings.set_boolean("animation-enabled", true);
+    settings.set_int("animation-duration", 100);
+    Gio.Settings.sync();
+    setTrayRevealed(true);
+    const item = addTrayItem("tray-hidden-twice");
+    setTrayRevealed(false);
+    waitForItemVisible(item, false);
+    sleep(300);
+
+    const before = fadeOutTimeouts();
+    settings.set_strv("visible-items", ["tray-unrelated"]);
+    Gio.Settings.sync();
+    sleep(500);
+    assert.equal(fadeOutTimeouts(), before, "fade-out timeouts");
+
+    settings.set_strv("visible-items", []);
+    settings.set_boolean("animation-enabled", false);
+    Gio.Settings.sync();
+});
 
 test("items added during a collapse animation are shown on expand", () => {
     settings.set_boolean("animation-enabled", true);
     settings.set_int("animation-duration", 100);
-    setRevealed(true);
+    setTrayRevealed(true);
     const first = addTrayItem("tray-race-a");
-    toggle();
+    toggleTray();
     const second = addTrayItem("tray-race-b");
-    waitFor("tray collapsed", () => !isRevealed());
+    waitFor("tray collapsed", () => !trayRevealed());
     sleep(400);
-    setRevealed(true);
+    setTrayRevealed(true);
     for (const item of [first, second]) {
         waitFor(`${item.role} fully shown`, () => {
             const state = item.state();
@@ -159,4 +170,18 @@ test("items added during a collapse animation are shown on expand", () => {
         });
     }
     settings.set_boolean("animation-enabled", false);
+});
+
+test("an item switched on while collapsed appears, and hides when switched off", () => {
+    setTrayRevealed(false);
+    const item = addTrayItem("tray-listed-late");
+    waitForItemVisible(item, false);
+
+    settings.set_strv("visible-items", ["tray-listed-late"]);
+    Gio.Settings.sync();
+    waitForItemVisible(item, true);
+
+    settings.set_strv("visible-items", []);
+    Gio.Settings.sync();
+    waitForItemVisible(item, false);
 });

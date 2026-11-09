@@ -1,11 +1,5 @@
 import Gio from "gi://Gio";
-import {
-    afterAll,
-    allowLogged,
-    assert,
-    test,
-    waitFor,
-} from "../lib/harness.js";
+import { afterAll, assert, test, waitFor } from "../lib/harness.js";
 import {
     addTrayItem,
     ExtensionState,
@@ -13,8 +7,6 @@ import {
     extensionSettings,
     panelItems,
 } from "../lib/shell.js";
-
-allowLogged(/has no handler with id/);
 
 const settings = extensionSettings();
 afterAll(() => {
@@ -46,6 +38,15 @@ test("disable removes the indicator and shows every item", () => {
     assert.ok(!hasIndicator(), "indicator still on the panel after disable");
     assert.ok(item.state().visible, "item left hidden after disable");
 
+    extension.enable();
+    extension.waitForState(ExtensionState.ACTIVE);
+    waitFor("Veil indicator after re-enable", hasIndicator);
+});
+
+test("disable after a tray app went away touches nothing of it", () => {
+    addTrayItem("lifecycle-gone").remove();
+    extension.disable();
+    extension.waitForState(ExtensionState.INACTIVE);
     extension.enable();
     extension.waitForState(ExtensionState.ACTIVE);
     waitFor("Veil indicator after re-enable", hasIndicator);
