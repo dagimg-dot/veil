@@ -1,8 +1,10 @@
 import Gio from "gi://Gio";
 import { afterAll, assert, sleep, test, waitFor } from "../lib/harness.js";
+import { clickAt } from "../lib/pointer.js";
 import {
     addTrayItem,
     extensionSettings,
+    itemCenter,
     setTrayRevealed,
     trayRevealed,
     waitForItemVisible,
@@ -59,6 +61,26 @@ test("collapsing by hand cancels the running timer", () => {
         () => !trayRevealed(),
         4000,
     );
+});
+
+test("an open tray menu keeps the tray expanded until it closes", () => {
+    apply(() => settings.set_int("auto-hide-duration", 3));
+    const item = addTrayItem("auto-hide-menu", { realMenu: true });
+    setTrayRevealed(true);
+    waitForItemVisible(item, true);
+    waitFor("the item's position", () => itemCenter(item.role)[0] > 0);
+    clickAt(...itemCenter(item.role));
+    waitFor("the item's menu to open", () => item.menuOpen());
+
+    sleep(4000);
+    assert.ok(trayRevealed(), "the tray collapsed under an open menu");
+
+    item.closeMenu();
+    waitFor("the item's menu to close", () => !item.menuOpen());
+    sleep(1500);
+    assert.ok(trayRevealed(), "the delay did not start over");
+    waitFor("auto-hide after the menu closed", () => !trayRevealed(), 4000);
+    waitForItemVisible(item, false);
 });
 
 test("nothing collapses the tray while auto-hide is off", () => {

@@ -32,6 +32,7 @@ export class PanelManager {
     private containersAwaitingChild: Set<Clutter.Actor> = new Set();
     private readonly nameWatchOwner = {};
     private hiddenByVeil: Set<Clutter.Actor> = new Set();
+    private appletsWithOpenMenu: Set<Clutter.Actor> = new Set();
     private menuCloseIdleSourceIds: Set<number> = new Set();
 
     constructor(
@@ -74,6 +75,16 @@ export class PanelManager {
     private forgetChild(child: Clutter.Actor) {
         this.connectedApplets.delete(child);
         this.nameWatchedApplets.delete(child as St.Widget);
+        this.setAppletMenuOpen(child, false);
+    }
+
+    private setAppletMenuOpen(child: Clutter.Actor, open: boolean) {
+        if (open) {
+            this.appletsWithOpenMenu.add(child);
+        } else {
+            this.appletsWithOpenMenu.delete(child);
+        }
+        this.stateManager.setAutoHideHeld(this.appletsWithOpenMenu.size > 0);
     }
 
     private detachHoverHandlersFromChild(child: Clutter.Actor) {
@@ -83,6 +94,7 @@ export class PanelManager {
         if (child instanceof PanelMenu.Button) {
             child.menu?.disconnectObject(this);
         }
+        this.setAppletMenuOpen(child, false);
     }
 
     private stopWatchingName(child: St.Widget) {
@@ -162,16 +174,19 @@ export class PanelManager {
         menu.connectObject(
             "open-state-changed",
             () => {
-                if (menu.isOpen) {
-                    this.clearPointerDownHoverGuard();
-                    return undefined;
-                }
                 this.clearPointerDownHoverGuard();
-                this.scheduleSyncHoverAfterMenuCloseIdle();
+                this.setAppletMenuOpen(child, menu.isOpen);
+                if (!menu.isOpen) {
+                    this.scheduleSyncHoverAfterMenuCloseIdle();
+                }
                 return undefined;
             },
             this,
         );
+
+        if (menu.isOpen) {
+            this.setAppletMenuOpen(child, true);
+        }
     }
 
     pointerInHoverSafeZone(): boolean {

@@ -104,6 +104,33 @@ describe("auto-hide", () => {
         expect(sources.size).toBe(0);
     });
 
+    test("waits while held and restarts the full delay on release", () => {
+        const state = new StateManager(settingsWith(autoHide));
+        state.setPanelRevealed(true);
+
+        state.setAutoHideHeld(true);
+        expect(sources.size).toBe(0);
+
+        state.setAutoHideHeld(false);
+        expect([...sources.values()][0].delay).toBe(5000);
+        runSources();
+        expect(state.isPanelRevealed()).toBe(false);
+    });
+
+    test("does not start when expanded while held", () => {
+        const state = new StateManager(settingsWith(autoHide));
+        state.setAutoHideHeld(true);
+        state.setPanelRevealed(true);
+        expect(sources.size).toBe(0);
+    });
+
+    test("releasing while collapsed starts nothing", () => {
+        const state = new StateManager(settingsWith(autoHide));
+        state.setAutoHideHeld(true);
+        state.setAutoHideHeld(false);
+        expect(sources.size).toBe(0);
+    });
+
     test("is cancelled by destroy", () => {
         const state = new StateManager(settingsWith(autoHide));
         state.setPanelRevealed(true);

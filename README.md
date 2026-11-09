@@ -27,7 +27,7 @@
 
 - **Selective tray**: when collapsed, only the status icons you pick stay visible
 - **Click or hover**: toggle the tray with the Veil indicator, or show every icon while the pointer is over the status area
-- **Auto-hide**: collapse the tray again after a delay (click mode)
+- **Auto-hide**: collapse the tray again after a delay (click mode), waiting while a tray item's menu is open
 - **Animations**: optional fade and slide with configurable duration and scope
 - **Tighter status spacing**: lower the padding between top-bar indicators
 - **Coexists with other applets**: icons hidden by their own extension stay hidden when the tray expands

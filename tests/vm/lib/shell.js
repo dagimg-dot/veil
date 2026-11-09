@@ -140,6 +140,8 @@ export function addTrayItem(name = "", { realMenu = false } = {}) {
         remove: () => helperCall("removeItem", role),
         style: () => helperCall("itemStyle", role),
         setStyle: (style) => helperCall("setItemStyle", role, style),
+        menuOpen: () => helperCall("itemMenuOpen", role),
+        closeMenu: () => helperCall("closeItemMenu", role),
     };
 }
 

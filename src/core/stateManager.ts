@@ -8,6 +8,7 @@ export class StateManager {
     private panelRevealed: boolean;
     private onPanelRevealChangedCallback?: (revealed: boolean) => void;
     private autoHideTimerId: number | null = null;
+    private autoHideHeld = false;
 
     constructor(settings: Gio.Settings) {
         this.settings = settings;
@@ -50,10 +51,17 @@ export class StateManager {
         }
     }
 
+    setAutoHideHeld(held: boolean) {
+        if (this.autoHideHeld === held) return;
+
+        this.autoHideHeld = held;
+        this.handleAutoHideTimer();
+    }
+
     private handleAutoHideTimer() {
         this.cancelAutoHideTimer();
 
-        if (this.panelRevealed) {
+        if (this.panelRevealed && !this.autoHideHeld) {
             const autoHideEnabled =
                 this.settings.get_boolean("auto-hide-enabled");
             if (autoHideEnabled) {

@@ -349,6 +349,74 @@ describe("tray item menus", () => {
     });
 });
 
+describe("auto-hide with tray menus", () => {
+    let menu;
+    let item;
+
+    const fakeMenu = () => {
+        const created = new Signals();
+        created.isOpen = false;
+        return created;
+    };
+
+    function setOpen(target, open) {
+        target.isOpen = open;
+        target.emit("open-state-changed");
+    }
+
+    const timers = () =>
+        [...sources.values()].filter((source) => source.delay === 5000).length;
+
+    beforeEach(() => {
+        setup();
+        settings.set_boolean("auto-hide-enabled", true);
+        manager.setPermanentVisibility(true);
+        menu = fakeMenu();
+        item = addPanelItem("tray", { menu });
+        collapse();
+        expand();
+    });
+
+    test("an open menu stops the timer and closing it starts over", () => {
+        expect(timers()).toBe(1);
+        setOpen(menu, true);
+        expect(timers()).toBe(0);
+        setOpen(menu, false);
+        expect(timers()).toBe(1);
+    });
+
+    test("the timer waits for the last open menu", () => {
+        const other = fakeMenu();
+        addPanelItem("other", { menu: other });
+        setOpen(menu, true);
+        setOpen(other, true);
+        setOpen(menu, false);
+        expect(timers()).toBe(0);
+        setOpen(other, false);
+        expect(timers()).toBe(1);
+    });
+
+    test("an applet destroyed with its menu open releases the hold", () => {
+        setOpen(menu, true);
+        item.child.emit("destroy");
+        expect(timers()).toBe(1);
+    });
+
+    test("an item removed with its menu open releases the hold", () => {
+        setOpen(menu, true);
+        panel._rightBox.children.pop();
+        panel._rightBox.emit("child-removed", item.container);
+        expect(timers()).toBe(1);
+    });
+
+    test("a menu already open when its item arrives holds the timer", () => {
+        const open = fakeMenu();
+        open.isOpen = true;
+        addPanelItem("open", { menu: open });
+        expect(timers()).toBe(0);
+    });
+});
+
 describe("cleanup", () => {
     test("removing an item drops its signal handlers", () => {
         setup();

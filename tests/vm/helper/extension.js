@@ -90,6 +90,13 @@ const helper = {
 
     closeIndicatorMenu: () => Main.panel.statusArea.veil.menu.close(),
 
+    itemMenuOpen: (role) =>
+        Main.panel.statusArea[`${ROLE_PREFIX}${role}`].menu.isOpen,
+
+    closeItemMenu(role) {
+        Main.panel.statusArea[`${ROLE_PREFIX}${role}`].menu.close();
+    },
+
     trayRevealed: (uuid) =>
         Main.extensionManager
             .lookup(uuid)
