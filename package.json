@@ -24,6 +24,7 @@
     "setup": "./scripts/setup.sh",
     "log": "./scripts/log.sh -f",
     "log:all": "./scripts/log.sh",
+    "test": "bun test tests/unit",
     "lint": "biome lint --write .",
     "lint:fix": "biome lint --write --unsafe .",
     "format": "biome format --write .",
