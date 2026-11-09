@@ -6,7 +6,7 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { Icons } from "../lib/icons.js";
-import { MainPanel } from "../types/index.js";
+import { type GesturePanelButton, MainPanel } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 
 export class VeilIndicator {
@@ -66,12 +66,10 @@ export class VeilIndicator {
         // GNOME 50+: intercept the click gesture before it shows the default menu.
         // The gesture's 'recognize' handler receives the action itself;
         // action.get_button() returns the mouse button that triggered it.
-        // biome-ignore lint/suspicious/noExplicitAny: _clickGesture is a private internal API not in GJS types
-        const gesture = (btn as any)._clickGesture;
+        const gesture = (btn as GesturePanelButton)._clickGesture;
         if (gesture) {
             this.indicatorSignalIds.push(
-                // biome-ignore lint/suspicious/noExplicitAny: gesture action type not available in GJS types
-                gesture.connect("recognize", (action: any) => {
+                gesture.connect("recognize", (action) => {
                     if (action.get_button() === Clutter.BUTTON_PRIMARY) {
                         onPrimaryClick();
                     }
