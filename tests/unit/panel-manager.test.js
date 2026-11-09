@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { PanelManager } from "../../src/core/panelManager.ts";
 import { StateManager } from "../../src/core/stateManager.ts";
 import {
@@ -7,6 +7,8 @@ import {
     fakeSettings,
     panel,
     resetPanel,
+    runSources,
+    Signals,
     sources,
     Widget,
 } from "./fakes.js";
@@ -290,6 +292,63 @@ describe("animated collapse", () => {
     });
 });
 
+describe("tray item menus", () => {
+    const originalGlobal = globalThis.global;
+    let menu;
+    let leaves;
+
+    function pointerOver(actor) {
+        globalThis.global = {
+            get_pointer: () => [640, 400, 0],
+            stage: { get_actor_at_pos: () => actor },
+        };
+    }
+
+    beforeEach(() => {
+        setup();
+        settings.set_string("interaction-mode", "hover");
+        manager.setPermanentVisibility(true);
+        menu = new Signals();
+        menu.isOpen = false;
+        addPanelItem("tray", { menu });
+        leaves = 0;
+        manager.setOnPanelLeave(() => {
+            leaves += 1;
+        });
+    });
+
+    afterEach(() => {
+        globalThis.global = originalGlobal;
+    });
+
+    test("closing one away from the panel counts as leaving", () => {
+        pointerOver(null);
+        menu.emit("open-state-changed");
+        runSources();
+        expect(leaves).toBe(1);
+    });
+
+    test("closing one over the panel does not", () => {
+        pointerOver(panel);
+        menu.emit("open-state-changed");
+        runSources();
+        expect(leaves).toBe(0);
+    });
+
+    test("opening one does not", () => {
+        pointerOver(null);
+        menu.isOpen = true;
+        menu.emit("open-state-changed");
+        runSources();
+        expect(leaves).toBe(0);
+    });
+
+    test("destroy releases the signal", () => {
+        manager.destroy();
+        expect(menu.connectedTo("open-state-changed")).toBe(0);
+    });
+});
+
 describe("cleanup", () => {
     test("removing an item drops its signal handlers", () => {
         setup();
@@ -323,7 +382,7 @@ describe("cleanup", () => {
         container.children = [];
         panel._rightBox.children.pop();
         panel._rightBox.emit("child-removed", container);
-        child.disconnect = () => {
+        child.disconnectObject = () => {
             throw new Error("touched a destroyed applet");
         };
 
