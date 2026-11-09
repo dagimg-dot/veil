@@ -128,9 +128,9 @@ export const helperReady = () => evalInShell("typeof veilTest !== 'undefined'");
 
 let nextRole = 0;
 
-export function addTrayItem(name = "") {
+export function addTrayItem(name = "", { realMenu = false } = {}) {
     const role = `item-${nextRole++}`;
-    helperCall("addItem", role, name);
+    helperCall("addItem", role, name, realMenu);
     afterAll(() => helperCall("removeItem", role));
     return {
         role,
@@ -138,8 +138,24 @@ export function addTrayItem(name = "") {
         rename: (newName) => helperCall("renameItem", role, newName),
         setVisible: (visible) => helperCall("setItemVisible", role, visible),
         remove: () => helperCall("removeItem", role),
+        style: () => helperCall("itemStyle", role),
+        setStyle: (style) => helperCall("setItemStyle", role, style),
     };
 }
+
+export function addEmptyContainer(name) {
+    const role = `container-${nextRole++}`;
+    helperCall("addEmptyContainer", role);
+    afterAll(() => helperCall("removeContainer", role));
+    return {
+        role,
+        fill: () => helperCall("fillContainer", role, name),
+        state: () => helperCall("containerState", role),
+    };
+}
+
+export const indicatorIcon = () => helperCall("indicatorIcon");
+export const activateSettingsItem = () => helperCall("activateSettingsItem");
 
 export const panelItems = () => helperCall("items");
 export const indicatorCenter = () => helperCall("indicatorCenter");

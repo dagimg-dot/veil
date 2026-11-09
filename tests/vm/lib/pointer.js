@@ -74,9 +74,8 @@ export function pointBy(dx, dy) {
     );
 }
 
-export function clickAt(x, y) {
+export function clickHere() {
     const path = startInputDevices();
-    moveTo(path, x, y);
     for (const pressed of [true, false]) {
         call(path, SESSION_IFACE, "NotifyPointerButton", "(ib)", [
             BTN_LEFT,
@@ -84,4 +83,9 @@ export function clickAt(x, y) {
         ]);
         sleep(50);
     }
+}
+
+export function clickAt(x, y) {
+    moveTo(startInputDevices(), x, y);
+    clickHere();
 }
