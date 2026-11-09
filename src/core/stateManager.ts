@@ -110,62 +110,6 @@ export class StateManager {
         }
     }
 
-    getVisibleItems(): string[] {
-        return this.settings.get_strv("visible-items");
-    }
-
-    setVisibleItems(items: string[]) {
-        this.settings.set_strv("visible-items", items);
-        logger.debug("Visible items updated", { count: items.length });
-    }
-
-    addVisibleItem(itemName: string) {
-        const visibleItems = this.getVisibleItems();
-        if (!visibleItems.includes(itemName)) {
-            visibleItems.push(itemName);
-            this.setVisibleItems(visibleItems);
-        }
-    }
-
-    removeVisibleItem(itemName: string) {
-        const visibleItems = this.getVisibleItems().filter(
-            (item) => item !== itemName,
-        );
-        this.setVisibleItems(visibleItems);
-    }
-
-    toggleVisibleItem(itemName: string): boolean {
-        const visibleItems = this.getVisibleItems();
-        const index = visibleItems.indexOf(itemName);
-        if (index >= 0) {
-            visibleItems.splice(index, 1);
-            this.setVisibleItems(visibleItems);
-            return false;
-        } else {
-            visibleItems.push(itemName);
-            this.setVisibleItems(visibleItems);
-            return true;
-        }
-    }
-
-    clearVisibleItems() {
-        this.setVisibleItems([]);
-        logger.debug("Visible items cleared");
-    }
-
-    cleanOrphanedItems(allItems: string[]) {
-        const visibleItems = this.getVisibleItems();
-        const cleaned = visibleItems.filter((item) => allItems.includes(item));
-        if (cleaned.length !== visibleItems.length) {
-            this.setVisibleItems(cleaned);
-            logger.debug("Cleaned orphaned items", {
-                before: visibleItems.length,
-                after: cleaned.length,
-            });
-        }
-        return cleaned.length !== visibleItems.length;
-    }
-
     setOnPanelRevealChanged(callback: (revealed: boolean) => void) {
         this.onPanelRevealChangedCallback = callback;
     }

@@ -39,7 +39,6 @@ export const AboutPage = GObject.registerClass(
             "extensionVersion",
             "linkWebsite",
             "linkIssues",
-            "legalRow",
             "extensionLicense",
         ],
     },
@@ -49,7 +48,6 @@ export const AboutPage = GObject.registerClass(
         declare _extensionVersion: Gtk.Label;
         declare _linkWebsite: Gtk.Button;
         declare _linkIssues: Gtk.Button;
-        declare _legalRow: Adw.ExpanderRow;
         declare _extensionLicense: Gtk.TextView;
 
         setMetadata(metadata: ExtensionPreferences["metadata"]) {

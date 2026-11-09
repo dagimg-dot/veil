@@ -9,7 +9,6 @@ const settingsWith = (overrides = {}) =>
         "default-visibility": false,
         "auto-hide-enabled": false,
         "auto-hide-duration": 5,
-        "visible-items": [],
         ...overrides,
     });
 
@@ -110,32 +109,5 @@ describe("auto-hide", () => {
         state.setPanelRevealed(true);
         state.destroy();
         expect(sources.size).toBe(0);
-    });
-});
-
-describe("visible items", () => {
-    test("add ignores duplicates and remove takes one out", () => {
-        const state = new StateManager(settingsWith());
-        state.addVisibleItem("a");
-        state.addVisibleItem("a");
-        state.addVisibleItem("b");
-        state.removeVisibleItem("a");
-        expect(state.getVisibleItems()).toEqual(["b"]);
-    });
-
-    test("toggle reports the new membership", () => {
-        const state = new StateManager(settingsWith());
-        expect(state.toggleVisibleItem("a")).toBe(true);
-        expect(state.toggleVisibleItem("a")).toBe(false);
-        expect(state.getVisibleItems()).toEqual([]);
-    });
-
-    test("cleanOrphanedItems drops names no longer on the panel", () => {
-        const state = new StateManager(
-            settingsWith({ "visible-items": ["a", "gone"] }),
-        );
-        expect(state.cleanOrphanedItems(["a", "b"])).toBe(true);
-        expect(state.getVisibleItems()).toEqual(["a"]);
-        expect(state.cleanOrphanedItems(["a", "b"])).toBe(false);
     });
 });

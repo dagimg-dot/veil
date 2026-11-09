@@ -93,7 +93,7 @@ export class PanelManager {
             if (!child) return;
             if (child === MainPanel.statusArea.quickSettings) return;
             if (child === this.veilIndicator) return;
-            this.attachHoverHandlers(actor, child);
+            this.attachHoverHandlers(child);
         });
     }
 
@@ -114,7 +114,7 @@ export class PanelManager {
         this.itemHoverHandlers.delete(child);
     }
 
-    private attachHoverHandlers(_actor: Clutter.Actor, child: Clutter.Actor) {
+    private attachHoverHandlers(child: Clutter.Actor) {
         this.detachHoverHandlersFromChild(child);
 
         const ids: number[] = [];
@@ -287,7 +287,7 @@ export class PanelManager {
             return;
         }
 
-        this.attachHoverHandlers(actor, child);
+        this.attachHoverHandlers(child);
 
         const itemName = this.getItemName(child as St.Widget);
         if (itemName) {
@@ -444,11 +444,6 @@ export class PanelManager {
         return null;
     }
 
-    isItemVisible(item: PanelItem): boolean {
-        const visibleItems = this.settings.get_strv("visible-items");
-        return visibleItems.includes(item.name);
-    }
-
     setPermanentVisibility(revealed: boolean) {
         this.initialSetupComplete = true;
 
@@ -552,21 +547,6 @@ export class PanelManager {
             this.fadeInItems(
                 itemsToRestore.filter((item) => !item.container.visible),
             );
-        });
-    }
-
-    restoreVisibility() {
-        const panelItems = this.getAllPanelItems();
-        const visibleItems = this.settings.get_strv("visible-items");
-
-        panelItems.forEach((item) => {
-            const shouldBeVisible = visibleItems.includes(item.name);
-            item.container.visible = shouldBeVisible;
-        });
-
-        logger.debug("Restored panel visibility", {
-            totalItems: panelItems.length,
-            visibleItemsCount: visibleItems.length,
         });
     }
 
