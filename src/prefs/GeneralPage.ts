@@ -4,6 +4,7 @@ import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
 import { getTemplate } from "../utils/getTemplate.js";
 import { logger } from "../utils/logger.js";
+import { readInteractionMode } from "../utils/settings.js";
 
 export const GeneralPage = GObject.registerClass(
     {
@@ -110,7 +111,7 @@ export const GeneralPage = GObject.registerClass(
             });
 
             // Bind interaction mode combo row
-            const interactionMode = settings.get_string("interaction-mode");
+            const interactionMode = readInteractionMode(settings);
             this._interactionMode.set_selected(
                 interactionMode === "hover" ? 1 : 0,
             );

@@ -21,6 +21,7 @@ import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import type { PopupMenu as ShellPopupMenu } from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { MainPanel, type PanelItem } from "../types/index.js";
 import { logger } from "../utils/logger.js";
+import { readInteractionMode } from "../utils/settings.js";
 import { AnimationManager } from "./animationManager.js";
 import { shouldOfferRevealForItem } from "./panelRevealRules.js";
 import type { StateManager } from "./stateManager.js";
@@ -115,7 +116,7 @@ export class PanelManager {
 
         ids.push(
             child.connect("enter-event", () => {
-                if (this.settings.get_string("interaction-mode") !== "hover") {
+                if (readInteractionMode(this.settings) !== "hover") {
                     return Clutter.EVENT_PROPAGATE;
                 }
                 this.setHoverInteractionZone("panel");
@@ -125,7 +126,7 @@ export class PanelManager {
 
         ids.push(
             child.connect("leave-event", () => {
-                if (this.settings.get_string("interaction-mode") !== "hover") {
+                if (readInteractionMode(this.settings) !== "hover") {
                     return Clutter.EVENT_PROPAGATE;
                 }
                 const shellMenu =
@@ -225,7 +226,7 @@ export class PanelManager {
     }
 
     private syncHoverAfterPanelMenuClose() {
-        if (this.settings.get_string("interaction-mode") !== "hover") return;
+        if (readInteractionMode(this.settings) !== "hover") return;
         if (this.pointerInHoverSafeZone()) return;
 
         this.setHoverInteractionZone("none");
@@ -647,7 +648,7 @@ export class PanelManager {
     }
 
     scheduleTemporaryHide() {
-        if (this.settings.get_string("interaction-mode") !== "hover") {
+        if (readInteractionMode(this.settings) !== "hover") {
             return;
         }
         if (this.hoverInteractionZone !== "none") {

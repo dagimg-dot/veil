@@ -8,6 +8,7 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { Icons } from "../lib/icons.js";
 import { type GesturePanelButton, MainPanel } from "../types/index.js";
 import { logger } from "../utils/logger.js";
+import { readInteractionMode } from "../utils/settings.js";
 
 export class VeilIndicator {
     private indicator: PanelMenu.Button | null = null;
@@ -46,8 +47,7 @@ export class VeilIndicator {
         const btn = this.panelButton;
 
         const onPrimaryClick = () => {
-            const interactionMode =
-                this.settings.get_string("interaction-mode");
+            const interactionMode = readInteractionMode(this.settings);
 
             // Only handle clicks in Click mode
             if (interactionMode === "click") {
@@ -180,8 +180,7 @@ export class VeilIndicator {
         const btn = this.panelButton;
         this.indicatorSignalIds.push(
             btn.connect("enter-event", () => {
-                const interactionMode =
-                    this.settings.get_string("interaction-mode");
+                const interactionMode = readInteractionMode(this.settings);
 
                 // Only handle hover in Hover mode
                 if (interactionMode === "hover") {
@@ -196,8 +195,7 @@ export class VeilIndicator {
 
         this.indicatorSignalIds.push(
             btn.connect("leave-event", () => {
-                const interactionMode =
-                    this.settings.get_string("interaction-mode");
+                const interactionMode = readInteractionMode(this.settings);
 
                 // Only handle hover in Hover mode
                 if (interactionMode === "hover") {
@@ -223,7 +221,7 @@ export class VeilIndicator {
 
     /** When a Shell menu closes without a matching leave-event (hover mode). */
     notifyHoverLeaveSyncFromMenu() {
-        if (this.settings.get_string("interaction-mode") !== "hover") return;
+        if (readInteractionMode(this.settings) !== "hover") return;
         this.isHovering = false;
         this.onHoverLeaveCallback?.();
     }

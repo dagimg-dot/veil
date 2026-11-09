@@ -13,6 +13,7 @@ import {
     initializeLogger,
     logger,
 } from "./utils/logger.js";
+import { readInteractionMode } from "./utils/settings.js";
 
 export default class Veil extends Extension {
     private indicator!: VeilIndicator | null;
@@ -94,8 +95,8 @@ export default class Veil extends Extension {
 
                     this.runOnIdle(() => {
                         if (
-                            this.settings?.get_string("interaction-mode") !==
-                            "hover"
+                            !this.settings ||
+                            readInteractionMode(this.settings) !== "hover"
                         ) {
                             return false;
                         }
@@ -174,7 +175,8 @@ export default class Veil extends Extension {
         );
         this.settingsHandlers.push(
             this.settings.connect("changed::interaction-mode", () => {
-                const mode = this.settings?.get_string("interaction-mode");
+                const mode =
+                    this.settings && readInteractionMode(this.settings);
                 if (mode === "hover") {
                     this.panelManager?.resetHoverStateForModeEntry();
                     // Click-expanded tray has the same look as hover preview; leave would
@@ -223,7 +225,7 @@ export default class Veil extends Extension {
             return;
         }
 
-        if (this.settings?.get_string("interaction-mode") !== "hover") {
+        if (!this.settings || readInteractionMode(this.settings) !== "hover") {
             return;
         }
 
