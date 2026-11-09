@@ -258,8 +258,6 @@ export default class Veil extends Extension {
     // session modes (metadata.json): unlock-dialog — run on the screen lock/unlock dialog so
     // tray visibility matches the user session and status-area horizontal spacing keeps
     // the main panel right box layout the same locked vs unlocked.
-    //
-    // Tear down all actors, signals, and main-loop sources.
     override disable() {
         logger.info("Veil extension disabled");
 
