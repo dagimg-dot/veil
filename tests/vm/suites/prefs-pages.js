@@ -1,8 +1,9 @@
 import "gi://Gtk?version=4.0";
 import Adw from "gi://Adw?version=1";
+import Gdk from "gi://Gdk?version=4.0";
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
-import { afterAll, assert, test } from "../lib/harness.js";
+import { afterAll, assert, test, waitFor } from "../lib/harness.js";
 import { extensionSettings, UUID } from "../lib/shell.js";
 
 const EXTENSION_DIR = `${GLib.get_user_data_dir()}/gnome-shell/extensions/${UUID}`;
@@ -154,6 +155,29 @@ test("the logging level combo writes the level", () => {
     assert.equal(settings.get_string("logging-level"), "debug", "level");
     general._loggingLevel.set_selected(2);
     assert.equal(settings.get_string("logging-level"), "info", "level");
+});
+
+test("the logs row shows the command and its button copies it", () => {
+    const command = 'journalctl --user -n 50 -g "Veil"';
+    assert.equal(general._journalctlRow.get_subtitle(), command, "subtitle");
+
+    const button = general._copyLogsCommandButton;
+    button.emit("clicked");
+    assert.equal(button.get_icon_name(), "object-select-symbolic", "icon");
+
+    let copied = null;
+    Gdk.Display.get_default()
+        .get_clipboard()
+        .read_text_async(null, (clipboard, result) => {
+            copied = clipboard.read_text_finish(result);
+        });
+    waitFor("the clipboard text", () => copied);
+    assert.equal(copied, command, "clipboard");
+
+    waitFor(
+        "the button icon to reset",
+        () => button.get_icon_name() === "edit-copy-symbolic",
+    );
 });
 
 test("the clear button removes a custom icon", () => {
