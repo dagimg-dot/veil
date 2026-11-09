@@ -8,7 +8,11 @@ import { PanelManager } from "./core/panelManager.js";
 import { StateManager } from "./core/stateManager.js";
 import { StatusAreaHorizontalSpacing } from "./core/statusAreaHorizontalSpacing.js";
 import { Icons } from "./lib/icons.js";
-import { initializeLogger, logger } from "./utils/logger.js";
+import {
+    deinitializeLogger,
+    initializeLogger,
+    logger,
+} from "./utils/logger.js";
 
 export default class Veil extends Extension {
     private indicator!: VeilIndicator | null;
@@ -273,6 +277,7 @@ export default class Veil extends Extension {
             });
             this.settingsHandlers = [];
             Icons.teardown(this.settings);
+            deinitializeLogger(this.settings);
         }
 
         if (this.panelManager) {

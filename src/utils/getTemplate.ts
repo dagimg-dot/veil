@@ -1,5 +1,5 @@
 import GLib from "gi://GLib";
-import { logger } from "./logger.js";
+import { type LogError, logger } from "./logger.js";
 
 export const getTemplate = (name: string): string => {
     let uri: string | null = null;
@@ -17,7 +17,10 @@ export const getTemplate = (name: string): string => {
             throw new Error(`Failed to resolve URI for template ${name}!`);
         }
     } catch (error) {
-        logger.error(`Failed to resolve URI for template ${name}!`, error);
+        logger.error(
+            `Failed to resolve URI for template ${name}!`,
+            error as LogError,
+        );
         throw error;
     }
 

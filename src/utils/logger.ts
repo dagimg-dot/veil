@@ -1,105 +1,109 @@
 import type Gio from "gi://Gio";
+import type GLib from "gi://GLib";
 
 const PROJECT_NAME = "Veil";
 
-export enum LogLevel {
-    ERROR = 0,
-    WARN = 1,
-    INFO = 2,
-    DEBUG = 3,
-}
+/** GSettings `logging-level` string values in ComboRow and verbosity order. */
+export const LOGGING_LEVELS = ["error", "warn", "info", "debug"] as const;
+export type LoggingLevel = (typeof LOGGING_LEVELS)[number];
 
-const stringToLogLevel = (level: string): LogLevel => {
-    switch (level.toLowerCase()) {
-        case "error":
-            return LogLevel.ERROR;
-        case "warn":
-            return LogLevel.WARN;
-        case "info":
-            return LogLevel.INFO;
-        case "debug":
-            return LogLevel.DEBUG;
-        default:
-            return LogLevel.INFO;
-    }
+export const DEFAULT_LOG_LEVEL: LoggingLevel = "info";
+
+/** What a GJS `catch` receives: a JS Error or a GLib.Error, which is not an Error subclass. */
+export type LogError = Error | GLib.Error;
+
+type LogValue = string | number | boolean | null | undefined | object;
+
+export type LogData =
+    | string
+    | number
+    | boolean
+    | LogError
+    | Record<string, LogValue>;
+
+/** Index of a `logging-level` value in LOGGING_LEVELS, falling back to the default. */
+export const getVerbosity = (level: string): number => {
+    const idx = (LOGGING_LEVELS as readonly string[]).indexOf(
+        level.toLowerCase(),
+    );
+    return idx >= 0 ? idx : LOGGING_LEVELS.indexOf(DEFAULT_LOG_LEVEL);
 };
 
-let currentLogLevel: LogLevel = LogLevel.INFO;
+// Global verbosity threshold for logger
+let currentVerbosity: number = getVerbosity(DEFAULT_LOG_LEVEL);
 
 export const initializeLogger = (settings: Gio.Settings) => {
     const levelString = settings.get_string("logging-level");
-    currentLogLevel = stringToLogLevel(levelString);
-
-    log(LogLevel.INFO, `Logger initialized with level: ${levelString}`);
+    currentVerbosity = getVerbosity(levelString);
 
     // Listen for log level changes
-    settings.connect("changed::logging-level", () => {
-        const newLevelString = settings.get_string("logging-level");
-        currentLogLevel = stringToLogLevel(newLevelString);
-        log(
-            LogLevel.INFO,
-            `Log level changed to: ${newLevelString}`,
-            undefined,
-            true,
-        );
-    });
+    settings.connectObject(
+        "changed::logging-level",
+        () => {
+            const newLevelString = settings.get_string("logging-level");
+            currentVerbosity = getVerbosity(newLevelString);
+            info(`Log level changed to: ${newLevelString}`);
+        },
+        logger,
+    );
+
+    info(`Logger initialized with level: ${levelString}`);
 };
 
-const formatLogSuffix = (data: unknown): string => {
-    if (typeof data === "object" && data !== null) {
-        try {
-            return ` ${JSON.stringify(data)}`;
-        } catch {
-            return " [Object]";
+export const deinitializeLogger = (settings: Gio.Settings) => {
+    settings.disconnectObject(logger);
+};
+
+/** JS Errors and GLib.Error, which keeps its message on the prototype. */
+const isErrorLike = (data: LogData): data is LogError =>
+    data instanceof Error ||
+    (typeof data === "object" &&
+        "message" in data &&
+        typeof data.message === "string");
+
+// Single write function — all console output routes through here
+const write = (prefix: string, message: string, data?: LogData) => {
+    const lines = [`${prefix}: ${message}`];
+    if (data !== undefined) {
+        if (isErrorLike(data)) {
+            // String() keeps the message: SpiderMonkey stacks hold frames only
+            lines.push(`${prefix}:   ${String(data)}`);
+            if (data.stack) {
+                lines.push(`${prefix}:   ${data.stack.trimEnd()}`);
+            }
+        } else if (typeof data === "object") {
+            for (const [key, value] of Object.entries(data)) {
+                lines.push(`${prefix}:   ${key}: ${value}`);
+            }
+        } else {
+            lines.push(`${prefix}: ${data}`);
         }
     }
-    return ` ${String(data)}`;
+    console.log(lines.join("\n"));
 };
 
-const log = (
-    level: LogLevel,
-    message: string,
-    data?: unknown,
-    logChange = false,
-) => {
-    // Early return if log level is too low
-    if (level > currentLogLevel && !logChange) {
-        return;
-    }
+const log = (level: LoggingLevel, message: string, data?: LogData) => {
+    if (LOGGING_LEVELS.indexOf(level) > currentVerbosity) return;
 
     const timestamp = new Date().toISOString();
-    const levelName = LogLevel[level];
-    const prefix = `[${PROJECT_NAME}] ${timestamp} ${levelName}`;
-
-    let line = `${prefix}: ${message}`;
-
-    if (data) {
-        line += formatLogSuffix(data);
-    }
-
-    console.log(line);
+    const prefix = `[${PROJECT_NAME}] ${timestamp} ${level.toUpperCase()}`;
+    write(prefix, message, data);
 };
 
-const debug = (message: string, data?: unknown) => {
-    log(LogLevel.DEBUG, message, data);
+const debug = (message: string, data?: LogData) => {
+    log("debug", message, data);
 };
 
-const info = (message: string, data?: unknown) => {
-    log(LogLevel.INFO, message, data);
+const info = (message: string, data?: LogData) => {
+    log("info", message, data);
 };
 
-const warn = (message: string, data?: unknown) => {
-    log(LogLevel.WARN, message, data);
+const warn = (message: string, data?: LogData) => {
+    log("warn", message, data);
 };
 
-const error = (message: string, err?: unknown) => {
-    const timestamp = new Date().toISOString();
-    const prefix = `[${PROJECT_NAME}] ${timestamp} ERROR`;
-    const line =
-        err !== undefined
-            ? `${prefix}: ${message}: ${String(err)}`
-            : `${prefix}: ${message}`;
-    console.error(line);
+const error = (message: string, err?: LogError) => {
+    log("error", message, err);
 };
 
 export const logger = {
